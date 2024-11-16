@@ -1,4 +1,5 @@
 import sys
+
 import os
 import shutil
 import stat
@@ -55,8 +56,9 @@ def main():
     current_tags = run_command("git tag --points-at HEAD").split('\n')
     cwd = os.getcwd()
     latest_commit_message = get_latest_commit_message()
-    for repo_url in repo_urls:
-        repo_name = os.path.basename(repo_url).replace('.git', '')
+
+    for index, repo_url in enumerate(repo_urls):
+        repo_name = f"repo_{index}"
         target_repo_path = os.path.join(parent_dir, repo_name)
 
         # Clone the repository into the parent directory
@@ -104,6 +106,7 @@ def main():
         except Exception as e:
             print(f"continue")
             continue
+
         # Push the changes and tags to the remote repository
         run_command(f"git push origin {current_branch} --force")
         for tag in current_tags:
@@ -118,6 +121,9 @@ def main():
 
     print("Operation completed successfully for all repositories.")
 
+
+if __name__ == "__main__":
+    main()
 
 if __name__ == "__main__":
     main()
