@@ -1,0 +1,107 @@
+from ok.feature.Box import Box, find_highest_confidence_box
+from ok.logging.Logger import get_logger
+from typing import List
+
+logger = get_logger(__name__)
+
+
+class FindFeature:
+
+    def __init__(self):
+        self.feature_set = None
+        self.executor = None
+
+    def find_feature(self, feature_name, horizontal_variance=0, vertical_variance=0, threshold=0,
+                     use_gray_scale=False, x=-1, y=-1, to_x=-1, to_y=-1, width=-1, height=-1, box=None, canny_lower=0,
+                     canny_higher=0, inverse_mask_color=None, frame_processor=None, template=None,
+                     mask_function=None) -> List[Box]:
+        return self.feature_set.find_feature(self.executor.frame, feature_name, horizontal_variance, vertical_variance,
+                                             threshold, use_gray_scale, x, y, to_x, to_y, width, height, box=box,
+                                             canny_lower=canny_lower, canny_higher=canny_higher,
+                                             inverse_mask_color=inverse_mask_color, frame_processor=frame_processor,
+                                             template=template, mask_function=mask_function)
+
+    def get_box_by_name(self, name):
+        return self.feature_set.get_box_by_name(self.executor.frame, name)
+
+    def find_feature_and_set(self, features, horizontal_variance=0, vertical_variance=0, threshold=0):
+        ret = True
+        if features is None:
+            raise Exception("features cannot be None")
+        if isinstance(features, str):
+            features = [features]
+        for feature in features:
+            result = self.find_one(feature, horizontal_variance, vertical_variance, threshold)
+            if result is None:
+                ret = False
+            setattr(self, feature, result)
+        return ret
+
+    def wait_feature(self, feature, horizontal_variance=0, vertical_variance=0, threshold=0, wait_until_before_delay=-1,
+                     time_out=0, pre_action=None, post_action=None, use_gray_scale=False, box=None,
+                     raise_if_not_found=False, canny_lower=0, canny_higher=0, inverse_mask_color=None,
+                     frame_processor=None):
+        return self.wait_until(
+            lambda: self.find_one(feature, horizontal_variance, vertical_variance, threshold,
+                                  use_gray_scale=use_gray_scale, box=box, inverse_mask_color=inverse_mask_color,
+                                  canny_lower=canny_lower, canny_higher=canny_higher,
+                                  frame_processor=frame_processor),
+            time_out=time_out,
+            pre_action=pre_action,
+            post_action=post_action, wait_until_before_delay=wait_until_before_delay,
+            raise_if_not_found=raise_if_not_found)
+
+    def wait_click_feature(self, feature, horizontal_variance=0, vertical_variance=0, threshold=0, relative_x=0.5,
+                           relative_y=0.5,
+                           time_out=0, pre_action=None, post_action=None, box=None, raise_if_not_found=True,
+                           use_gray_scale=False, canny_lower=0, canny_higher=0, click_after_delay=0,
+                           wait_until_before_delay=-1):
+        box = self.wait_until(
+            lambda: self.find_one(feature, horizontal_variance, vertical_variance, threshold, box=box,
+                                  use_gray_scale=use_gray_scale, canny_lower=canny_lower, canny_higher=canny_higher),
+            time_out=time_out,
+            pre_action=pre_action,
+            post_action=post_action, raise_if_not_found=raise_if_not_found,
+            wait_until_before_delay=wait_until_before_delay)
+        if box is not None:
+            if click_after_delay > 0:
+                self.sleep(click_after_delay)
+            self.click_box(box, relative_x, relative_y)
+            return True
+        return False
+
+    def find_one(self, feature_name, horizontal_variance=0, vertical_variance=0, threshold=0,
+                 use_gray_scale=False, box=None, canny_lower=0, canny_higher=0, inverse_mask_color=None,
+                 frame_processor=None, template=None, mask_function=None) -> Box:
+        boxes = self.find_feature(feature_name, horizontal_variance, vertical_variance, threshold,
+                                  use_gray_scale=use_gray_scale, box=box, canny_lower=canny_lower,
+                                  canny_higher=canny_higher, inverse_mask_color=inverse_mask_color,
+                                  frame_processor=frame_processor, template=template, mask_function=mask_function)
+        if len(boxes) > 0:
+            if len(boxes) > 1:
+                logger.warning(f"find_one:found {feature_name} too many {len(boxes)}")
+            highest_box = find_highest_confidence_box(boxes)
+            return highest_box
+
+    def on_feature(self, boxes):
+        pass
+
+    def feature_exists(self, feature_name: str) -> bool:
+        return self.feature_set.feature_exists(feature_name)
+
+    def find_best_match_in_box(self, box, to_find, threshold, use_gray_scale=False,
+                               canny_lower=0, canny_higher=0, inverse_mask_color=None,
+                               frame_processor=None, mask_function=None):
+        max_conf = 0
+        max_box = None
+        for feature_name in to_find:
+            feature = self.find_one(feature_name, box=box,
+                                    threshold=threshold, use_gray_scale=use_gray_scale,
+                                    canny_lower=canny_lower, canny_higher=canny_higher,
+                                    inverse_mask_color=inverse_mask_color,
+                                    frame_processor=frame_processor, mask_function=mask_function)
+            if feature and feature.confidence > max_conf:
+                max_conf = feature.confidence
+                max_box = feature
+        logger.info(f'find_best_match_in_box: {max_box} {max_conf}')
+        return max_box
