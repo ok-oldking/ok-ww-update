@@ -39,6 +39,8 @@ def main():
     repo_urls = sys.argv[repos_index:files_index - 1]
     files_to_copy = sys.argv[files_index:]
 
+    print(repo_urls, files_to_copy)
+
     if not repo_urls or not files_to_copy:
         print("Both repository URLs and files must be specified.")
         sys.exit(1)
@@ -58,13 +60,16 @@ def main():
     latest_commit_message = get_latest_commit_message()
 
     for index, repo_url in enumerate(repo_urls):
+        print(f"Processing {repo_url}")
         repo_name = f"repo_{index}"
         target_repo_path = os.path.join(parent_dir, repo_name)
 
         # Clone the repository into the parent directory
         if os.path.exists(target_repo_path):
             shutil.rmtree(target_repo_path, onerror=on_rm_error)
+            print(f'delete folder: {target_repo_path}')
         run_command(f"git clone {repo_url} {target_repo_path}")
+        print(f'clone folder: {target_repo_path}')
         os.chdir(target_repo_path)
 
         # Get the current branch name of the target repo
@@ -103,8 +108,8 @@ def main():
         run_command("git add .")
         try:
             run_command(f'git commit -m "{latest_commit_message}"')
-        except Exception as e:
-            print(f"continue")
+        except:
+            print(f"continue next")
             continue
 
         # Push the changes and tags to the remote repository
@@ -121,9 +126,6 @@ def main():
 
     print("Operation completed successfully for all repositories.")
 
-
-if __name__ == "__main__":
-    main()
 
 if __name__ == "__main__":
     main()
