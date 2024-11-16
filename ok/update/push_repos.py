@@ -28,6 +28,10 @@ def get_latest_commit_message():
     return run_command("git log -1 --pretty=%B").strip()
 
 
+def should_skip(item_path, skip_items):
+    return os.path.basename(item_path) in skip_items
+
+
 def main():
     if '--repos' not in sys.argv or '--files' not in sys.argv:
         print("Usage: python update_repos.py --repos repo1 repo2 ... --files file1 file2 ... [--skip skip1 skip2 ...]")
@@ -77,23 +81,29 @@ def main():
         # Get the current branch name of the target repo
         current_branch = get_current_branch()
 
-        # Delete files and folders in the target repo if they don't exist in the source
-        for item in os.listdir(target_repo_path):
-            if item != '.git' and item != '.gitignore' and item not in skip_items:
-                target_item_path = os.path.join(target_repo_path, item)
-                src_item_path = os.path.join(cwd, item)
-                if not os.path.exists(src_item_path):
-                    run_command(f"git rm -rf {item}")
-                else:
-                    if os.path.isdir(target_item_path):
-                        shutil.rmtree(target_item_path, onerror=on_rm_error)
+        for root, dirs, files in os.walk(target_repo_path):
+            # Prune directories
+            dirs[:] = [d for d in dirs if os.path.relpath(os.path.join(root, d), target_repo_path) != '.git'
+                       and os.path.relpath(os.path.join(root, d), target_repo_path) != '.gitignore'
+                       and not should_skip(os.path.join(root, d), skip_items)]
+
+            for name in dirs + files:
+                item_path = os.path.join(root, name)
+                relative_path = os.path.relpath(item_path, target_repo_path)
+                src_item_path = os.path.join(cwd, relative_path)
+                if relative_path != '.git' and relative_path != '.gitignore' and not should_skip(item_path, skip_items):
+                    if not os.path.exists(src_item_path):
+                        run_command(f"git rm -rf {relative_path}")
                     else:
-                        os.remove(target_item_path)
+                        if os.path.isdir(item_path):
+                            shutil.rmtree(item_path, onerror=on_rm_error)
+                        else:
+                            os.remove(item_path)
 
         # Copy specified files and folders to the cloned repository
         os.chdir(cwd)
         for item in files_to_copy:
-            if item not in skip_items:
+            if not should_skip(item, skip_items):
                 src = os.path.join(os.getcwd(), item)
                 dest = os.path.join(target_repo_path, item)
                 try:
