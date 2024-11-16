@@ -1,7 +1,7 @@
 import sys
 
 from PySide6.QtCore import Qt
-from PySide6.QtWidgets import QVBoxLayout
+from PySide6.QtWidgets import QVBoxLayout, QApplication
 from qfluentwidgets import BodyLabel, PushButton
 from qframelesswindow import FramelessWindow, StandardTitleBar
 
@@ -44,3 +44,4 @@ class MessageWindow(FramelessWindow):
 
     def quit(self):
         ok.gui.ok.quit()
+        QApplication.quit()
