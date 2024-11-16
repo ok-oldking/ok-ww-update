@@ -30,16 +30,18 @@ def get_latest_commit_message():
 
 def main():
     if '--repos' not in sys.argv or '--files' not in sys.argv:
-        print("Usage: python update_repos.py --repos repo1 repo2 ... --files file1 file2 ...")
+        print("Usage: python update_repos.py --repos repo1 repo2 ... --files file1 file2 ... [--skip skip1 skip2 ...]")
         sys.exit(1)
 
     repos_index = sys.argv.index('--repos') + 1
     files_index = sys.argv.index('--files') + 1
+    skip_index = sys.argv.index('--skip') + 1 if '--skip' in sys.argv else None
 
     repo_urls = sys.argv[repos_index:files_index - 1]
-    files_to_copy = sys.argv[files_index:]
+    files_to_copy = sys.argv[files_index:skip_index - 1] if skip_index else sys.argv[files_index:]
+    skip_items = sys.argv[skip_index:] if skip_index else []
 
-    print(repo_urls, files_to_copy)
+    print(repo_urls, files_to_copy, skip_items)
 
     if not repo_urls or not files_to_copy:
         print("Both repository URLs and files must be specified.")
@@ -77,7 +79,7 @@ def main():
 
         # Delete files and folders in the target repo if they don't exist in the source
         for item in os.listdir(target_repo_path):
-            if item != '.git' and item != '.gitignore':
+            if item != '.git' and item != '.gitignore' and item not in skip_items:
                 target_item_path = os.path.join(target_repo_path, item)
                 src_item_path = os.path.join(cwd, item)
                 if not os.path.exists(src_item_path):
@@ -91,16 +93,17 @@ def main():
         # Copy specified files and folders to the cloned repository
         os.chdir(cwd)
         for item in files_to_copy:
-            src = os.path.join(os.getcwd(), item)
-            dest = os.path.join(target_repo_path, item)
-            try:
-                if os.path.isdir(src):
-                    shutil.copytree(src, dest)
-                else:
-                    shutil.copy2(src, dest)
-            except Exception as e:
-                print(f"Error: {src} to {dest} could not be copied.")
-                raise e
+            if item not in skip_items:
+                src = os.path.join(os.getcwd(), item)
+                dest = os.path.join(target_repo_path, item)
+                try:
+                    if os.path.isdir(src):
+                        shutil.copytree(src, dest)
+                    else:
+                        shutil.copy2(src, dest)
+                except Exception as e:
+                    print(f"Error: {src} to {dest} could not be copied.")
+                    raise e
 
         os.chdir(target_repo_path)
 
