@@ -84,21 +84,21 @@ def main():
         for root, dirs, files in os.walk(target_repo_path):
             # Prune directories
             dirs[:] = [d for d in dirs if os.path.relpath(os.path.join(root, d), target_repo_path) != '.git'
-                       and os.path.relpath(os.path.join(root, d), target_repo_path) != '.gitignore'
-                       and not should_skip(os.path.join(root, d), skip_items)]
+                       and os.path.relpath(os.path.join(root, d), target_repo_path) != '.gitignore']
 
             for name in dirs + files:
                 item_path = os.path.join(root, name)
                 relative_path = os.path.relpath(item_path, target_repo_path)
                 src_item_path = os.path.join(cwd, relative_path)
-                if relative_path != '.git' and relative_path != '.gitignore' and not should_skip(item_path, skip_items):
-                    if not os.path.exists(src_item_path):
-                        run_command(f"git rm -rf {relative_path}")
+                if not os.path.exists(src_item_path) or should_skip(src_item_path, skip_items):
+                    run_command(f"git rm -rf {relative_path}")
+                    print(f'git rm {relative_path}')
+                else:
+                    print(f'rm {relative_path}')
+                    if os.path.isdir(item_path):
+                        shutil.rmtree(item_path, onerror=on_rm_error)
                     else:
-                        if os.path.isdir(item_path):
-                            shutil.rmtree(item_path, onerror=on_rm_error)
-                        else:
-                            os.remove(item_path)
+                        os.remove(item_path)
 
         # Copy specified files and folders to the cloned repository
         os.chdir(cwd)
