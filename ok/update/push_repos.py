@@ -108,12 +108,11 @@ def main():
         run_command("git add .")
         try:
             run_command(f'git commit -m "{latest_commit_message}"')
+            # Push the changes and tags to the remote repository
+            run_command(f"git push origin {current_branch} --force")
         except:
-            print(f"continue next")
-            continue
+            print(f"nothing to commit next")
 
-        # Push the changes and tags to the remote repository
-        run_command(f"git push origin {current_branch} --force")
         for tag in current_tags:
             if tag:
                 try:
