@@ -118,6 +118,7 @@ def main():
         os.chdir(target_repo_path)
 
         # Add the copied files and folders to the git index
+        run_command("git rm -r --cached .")
         run_command("git add .")
         try:
             run_command(f'git commit -m "{latest_commit_message}"')
