@@ -5,10 +5,10 @@ from ctypes import windll, wintypes
 from PySide6.QtCore import Qt, Signal, QCoreApplication
 from PySide6.QtWidgets import QWidget, QFileDialog, QCompleter, QVBoxLayout, QHBoxLayout
 from _ctypes import byref
+from ok.Capture import ImageCaptureMethod
 from qfluentwidgets import PushButton, FlowLayout, ComboBox, SearchLineEdit, TextEdit
 
 import ok.gui
-from ok.Capture import ImageCaptureMethod
 from ok.capture.windows.dump import dump_threads
 from ok.config.Config import Config
 from ok.gui.i18n.GettextTranslator import convert_to_mo_files
@@ -185,7 +185,7 @@ class DebugTab(Tab):
         try:
             images = self.config.get("target_images")
             if images:
-                ok.gui.device_manager.capture_method = ImageCaptureMethod(images)
+                ok.gui.device_manager.capture_method = ImageCaptureMethod(ok.gui.device_manager.exit_event, images)
                 ok.gui.device_manager.interaction = DoNothingInteraction(ok.gui.device_manager.capture_method)
             else:
                 task.next_frame()

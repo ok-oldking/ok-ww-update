@@ -13,7 +13,6 @@ from ok.feature.Box import Box, sort_boxes
 from ok.feature.Feature import Feature
 from ok.gui.Communicate import communicate
 from ok.logging.Logger import get_logger
-from ok.util.path import get_path_relative_to_exe
 from typing import Dict
 from typing import List
 
@@ -36,7 +35,7 @@ class FeatureSet:
             width (int): Scale images to this width.
             height (int): Scale images to this height.
         """
-        self.coco_json = get_path_relative_to_exe(coco_json)
+        self.coco_json = coco_json
         self.debug = debug
 
         logger.debug(f'Loading features from {self.coco_json}')
@@ -291,11 +290,10 @@ def read_from_json(coco_json, width=-1, height=-1):
         # Load and scale the image
         image_path = str(os.path.join(coco_folder, file_name))
         if ok_compressed is None:
-            image = Image.open(image_path)
-            ok_compressed = 'ok_compressed' in image.info.keys()
+            with Image.open(image_path) as img:
+                ok_compressed = 'ok_compressed' in img.info.keys()
         whole_image = cv2.imread(image_path)
         if whole_image is None:
-            load_success = False
             logger.error(f'Could not read image {image_path}')
             raise ValueError(f'Could not read image {image_path}')
         _, original_width = whole_image.shape[:2]
