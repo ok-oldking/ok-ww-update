@@ -16,6 +16,8 @@ from ok.logging.Logger import get_logger
 from typing import Dict
 from typing import List
 
+from ok.util.path import get_path_relative_to_exe
+
 logger = get_logger(__name__)
 
 
@@ -35,7 +37,7 @@ class FeatureSet:
             width (int): Scale images to this width.
             height (int): Scale images to this height.
         """
-        self.coco_json = coco_json
+        self.coco_json = get_path_relative_to_exe(coco_json)
         self.debug = debug
 
         logger.debug(f'Loading features from {self.coco_json}')
