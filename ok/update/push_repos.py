@@ -124,6 +124,8 @@ def main():
                 run_command(f"git push origin {tag} --force")
                 print(f'pushed tag {tag}')
 
+        run_command(f"git push origin --tags --force")
+
     print("Operation completed successfully for all repositories.")
 
 

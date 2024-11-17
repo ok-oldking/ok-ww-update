@@ -1,6 +1,6 @@
 from PySide6.QtCore import QCoreApplication
-from PySide6.QtWidgets import QWidget, QHBoxLayout, QLabel, QSpacerItem, QSizePolicy, QVBoxLayout
-from qfluentwidgets import PushButton, ComboBox, FluentIcon
+from PySide6.QtWidgets import QWidget, QHBoxLayout, QLabel, QSpacerItem, QSizePolicy, QVBoxLayout, QScrollArea
+from qfluentwidgets import PushButton, ComboBox, FluentIcon, PrimaryPushButton
 
 from ok.gui.Communicate import communicate
 from ok.gui.launcher.DownloadBar import DownloadBar
@@ -19,9 +19,11 @@ class UpdateBar(QWidget):
 
         self.layout = QVBoxLayout()
 
-        self.version_log_label = QLabel()
+        self.log_scroll_area = QScrollArea()
+        self.version_log_label = QLabel(self.tr("Checking for Updates..."))
         self.version_log_label.setWordWrap(True)
-        self.layout.addWidget(self.version_log_label)
+        self.log_scroll_area.setWidget(self.version_log_label)
+        self.log_scroll_area.setWidgetResizable(True)
 
         if config.get('links'):
             self.links_bar = LinksBar(config)
@@ -32,10 +34,20 @@ class UpdateBar(QWidget):
 
         self.hbox_layout = QHBoxLayout()
         self.layout.addLayout(self.hbox_layout)
-
-        communicate.update_logs.connect(self.update_logs)
         self.hbox_layout.addItem(QSpacerItem(0, 0, QSizePolicy.Expanding, QSizePolicy.Minimum))
         self.hbox_layout.setSpacing(20)
+
+        self.version_log_hbox_layout = QHBoxLayout()
+        self.layout.addLayout(self.version_log_hbox_layout)
+
+        self.version_log_hbox_layout.addWidget(self.log_scroll_area)
+
+        self.update_hbox_layout = QHBoxLayout()
+        self.layout.addLayout(self.update_hbox_layout)
+        self.update_hbox_layout.addItem(QSpacerItem(0, 0, QSizePolicy.Expanding, QSizePolicy.Minimum))
+        self.update_hbox_layout.setSpacing(20)
+
+        communicate.update_logs.connect(self.update_logs)
 
         self.delete_dependencies_button = PushButton(self.tr("Delete Downloaded Dependencies"), icon=FluentIcon.DELETE)
         self.delete_dependencies_button.clicked.connect(self.updater.clear_dependencies)
@@ -65,20 +77,31 @@ class UpdateBar(QWidget):
         self.hbox_layout.addWidget(self.check_update_button)
         self.check_update_button.clicked.connect(self.updater.list_all_versions)
 
+        self.version_label = QLabel()
+        self.version_label_target = QLabel()
+        self.update_hbox_layout.addWidget(self.version_label)
+
+        self.current_version = ComboBox()
+        self.update_hbox_layout.addWidget(self.current_version)
+        self.update_hbox_layout.addWidget(self.version_label_target)
+        self.current_version.addItems([self.updater.launcher_config.get(
+            'app_version')])
+        self.version_label.setText(self.tr('Current Version:'))
+        self.version_label_target.setText(self.tr('TargetVersion:'))
+
+        self.version_log_label.setStyleSheet("font-size: 16px;")
+        self.version_label.setStyleSheet("font-size: 16px;")
+        self.version_label_target.setStyleSheet("font-size: 16px;")
+
         self.version_list = ComboBox()
-        self.version_list.setVisible(False)
-        self.hbox_layout.addWidget(self.version_list)
+        self.update_hbox_layout.addWidget(self.version_list)
         self.version_list.currentTextChanged.connect(self.version_selection_changed)
 
-        self.update_button = PushButton(self.tr("Update"), icon=FluentIcon.UP)
+        self.update_button = PrimaryPushButton(self.tr("Update"), icon=FluentIcon.UP)
         self.update_button.clicked.connect(self.update_clicked)
-        self.hbox_layout.addWidget(self.update_button)
+        self.update_hbox_layout.addWidget(self.update_button)
 
-        self.update_button.setVisible(False)
-
-        self.is_newest = QLabel(self.tr("This is the newest version"))
-        self.is_newest.setVisible(False)
-        self.hbox_layout.addWidget(self.is_newest)
+        self.set_op_btn_visible(False)
 
         self.setLayout(self.layout)
 
@@ -87,19 +110,25 @@ class UpdateBar(QWidget):
             self.updater.update_source(self.update_sources.currentIndex())
 
     def version_selection_changed(self, text):
-        if is_newer_or_eq_version(text, self.updater.launcher_config.get('app_version')) >= 0:
-            self.update_button.setText(self.tr("Update"))
-            self.update_button.setIcon(icon=FluentIcon.UP)
-        else:
-            self.update_button.setText(self.tr("Downgrade"))
-            self.update_button.setIcon(icon=FluentIcon.DOWN)
+        self.update_update_btns(text)
         self.updater.version_selection_changed(text)
+
+    def update_update_btns(self, text):
+        if text:
+            cmp = is_newer_or_eq_version(text, self.updater.launcher_config.get('app_version'))
+            if cmp >= 0:
+                self.update_button.setText(self.tr("Update"))
+                self.update_button.setIcon(icon=FluentIcon.UP)
+                self.update_button.setDisabled(cmp == 0)
+            else:
+                self.update_button.setText(self.tr("Downgrade"))
+                self.update_button.setIcon(icon=FluentIcon.DOWN)
 
     def update_logs(self, logs):
         if logs:
             self.version_log_label.setText(logs)
         else:
-            self.version_log_label.setText("")
+            self.version_log_label.setText(self.tr("This is the newest version"))
         self.version_log_label.setVisible(logs is not None)
 
     def update_clicked(self):
@@ -113,15 +142,23 @@ class UpdateBar(QWidget):
         self.update_sources.setDisabled(running)
         self.version_list.setDisabled(running)
         self.delete_dependencies_button.setDisabled(running)
+        self.set_op_btn_visible(not running)
+        if running:
+            self.version_log_label.setText(self.tr("Checking for Updates..."))
 
     def update_versions(self, versions):
         if not versions:  # fetch version error
             self.version_list.clear()
+            self.version_label.setText(self.tr("This is the newest version"))
         else:
             current_items = [self.version_list.itemText(i) for i in range(self.version_list.count())]
             if current_items != versions:
                 self.version_list.clear()
                 self.version_list.addItems(versions)
-        self.version_list.setVisible(len(versions) != 0)
-        self.update_button.setVisible(len(versions) != 0)
-        self.is_newest.setVisible(len(versions) == 0)
+                self.set_op_btn_visible(len(versions) != 0)
+
+    def set_op_btn_visible(self, visible):
+        for i in reversed(range(self.update_hbox_layout.count())):
+            widget = self.update_hbox_layout.itemAt(i).widget()
+            if widget is not None:
+                widget.setVisible(visible)

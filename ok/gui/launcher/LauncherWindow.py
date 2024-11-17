@@ -5,7 +5,6 @@ from qfluentwidgets import SplitTitleBar
 
 from ok.gui.Communicate import communicate
 from ok.gui.common.style_sheet import StyleSheet
-from ok.gui.debug.LogWindow import LogWindow
 from ok.gui.launcher.RunBar import RunBar
 from ok.gui.launcher.UpdateBar import UpdateBar
 from ok.gui.util.app import show_info_bar
@@ -30,12 +29,9 @@ class LauncherWindow(BaseWindow):
         self.setWindowTitle(QCoreApplication.translate('app', '{} Launcher').format(config.get('gui_title')))
         self.icon = QIcon(get_path_relative_to_exe(config.get('gui_icon')) or ":/icon/icon.ico")
         self.setWindowIcon(self.icon)
-        self.resize(1000, 650)
+        self.resize(600, 500)
         self.layout = QVBoxLayout()
         self.layout.setContentsMargins(4, 40, 4, 4)
-        self.log_window = LogWindow(floating=False)
-
-        self.layout.addWidget(self.log_window)
 
         self.install_bar = UpdateBar(config, self.updater)
         self.layout.addWidget(self.install_bar)

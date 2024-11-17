@@ -377,7 +377,8 @@ class GitUpdater:
         if not self.launcher_config['app_dependencies_installed']:
             alert_info(QCoreApplication.translate('app', f'Start downloading'))
             if not self.install_dependencies('app_env'):
-                alert_info(QCoreApplication.translate('app', f'Install dependencies Failed'))
+                alert_info(QCoreApplication.translate('app',
+                                                      f'Install dependencies failed, try changing the update source, or re-download the full version!'))
                 communicate.update_running.emit(False)
                 self.download_monitor.stop_monitoring()
                 return
@@ -459,7 +460,7 @@ class GitUpdater:
             else:
                 self.yanked = False
             tags = sorted(list(filter(
-                lambda x: is_newer_or_eq_version(x, self.lts_ver) >= 0 and x != self.launcher_config.get('app_version'),
+                lambda x: is_newer_or_eq_version(x, self.lts_ver) >= 0,
                 hash_to_ver.values())),
                 key=cmp_to_key(is_newer_or_eq_version),
                 reverse=True)
@@ -684,7 +685,12 @@ def fix_version_in_repo(repo_dir, tag):
     with open(launcher_json, 'r', encoding='utf-8') as file:
         content = file.read()
     # Replace the version string
-    new_content = replace_ok_script_ver(content, full_version)
+    if os.path.exists(os.path.join(repo_dir, 'ok')):
+        logger.info('ok-script is bundled with source code, skip downloading')
+        new_content = replace_ok_script_ver(content, "")
+    else:
+        logger.info(f'ok-script is not bundled with source code, replace with {full_version}')
+        new_content = replace_ok_script_ver(content, full_version)
     # Write the updated content back to the file
     with open(launcher_json, 'w', encoding='utf-8') as file:
         file.write(new_content)
