@@ -2,7 +2,7 @@ from qfluentwidgets import ComboBox
 
 import ok.gui
 from ok.gui.tasks.ConfigLabelAndWidget import ConfigLabelAndWidget
-from ok.util.list import find_index_in_list
+from ok.Util import find_index_in_list
 
 
 class LabelAndDropDown(ConfigLabelAndWidget):

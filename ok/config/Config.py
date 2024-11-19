@@ -1,7 +1,7 @@
 from ok.gui.Communicate import communicate
 from ok.logging.Logger import get_logger
-from ok.util.json import read_json_file, write_json_file
-from ok.util.path import get_relative_path
+from ok.Util import read_json_file, write_json_file
+from ok.Util import get_relative_path
 
 logger = get_logger(__name__)
 

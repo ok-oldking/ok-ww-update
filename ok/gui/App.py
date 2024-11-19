@@ -15,7 +15,7 @@ from ok.gui.overlay.OverlayWindow import OverlayWindow
 from ok.gui.util.app import init_app_config
 from ok.logging.Logger import get_logger
 from ok.update.GitUpdater import GitUpdater
-from ok.util.path import get_path_relative_to_exe
+from ok.Util import get_path_relative_to_exe
 
 logger = get_logger(__name__)
 

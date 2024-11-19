@@ -3,7 +3,7 @@ import sys
 import shutil
 import subprocess
 from ok.logging.Logger import get_logger
-from ok.util.path import delete_if_exists
+from ok.Util import delete_if_exists
 
 logger = get_logger(__name__)
 

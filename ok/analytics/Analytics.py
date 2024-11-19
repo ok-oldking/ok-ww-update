@@ -10,7 +10,7 @@ import wmi
 import ok.gui
 from ok.config.Config import Config
 from ok.logging.Logger import get_logger
-from ok.util.Handler import Handler
+from ok.Util import Handler
 
 logger = get_logger(__name__)
 

@@ -5,8 +5,6 @@ import sys
 import traceback
 from logging.handlers import TimedRotatingFileHandler, QueueHandler, QueueListener
 
-from ok.util.path import ensure_dir_for_file, get_relative_path
-
 
 class CommunicateHandler(logging.Handler):
     def __init__(self):
@@ -45,6 +43,7 @@ def log_exception_handler(exc_type, exc_value, exc_traceback):
 
 
 def config_logger(config=None, name='ok-script'):
+    from ok.Util import ensure_dir_for_file, get_relative_path
     if not config:
         config = {'debug': True}
     if config.get('debug'):

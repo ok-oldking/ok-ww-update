@@ -4,7 +4,7 @@ import sys
 import threading
 import traceback
 
-from ok.util.path import get_relative_path
+from ok.Util import get_relative_path
 
 
 def get_thread_name(thread_id):

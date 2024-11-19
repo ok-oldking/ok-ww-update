@@ -19,8 +19,8 @@ from ok.logging.LogTailer import LogTailer
 from ok.logging.Logger import get_logger
 from ok.update.DownloadMonitor import DownloadMonitor
 from ok.update.python_env import create_venv, find_line_in_requirements, get_env_path, modify_venv_cfg
-from ok.util.Handler import Handler
-from ok.util.path import get_relative_path, delete_if_exists, delete_folders_starts_with
+from ok.Util import Handler
+from ok.Util import get_relative_path, delete_if_exists, delete_folders_starts_with
 
 logger = get_logger(__name__)
 
@@ -399,7 +399,7 @@ class GitUpdater:
             import git
             repo = git.Repo.clone_from(self.url, path, branch=version, depth=depth)
         else:
-            repo.git.fetch('origin', f'refs/tags/{version}:refs/tags/{version}', '--depth=1')
+            repo.git.fetch('origin', f'refs/tags/{version}:refs/tags/{version}', '--depth=1', '--force')
             repo.git.checkout(version, force=True)
         fix_version_in_repo(path, version)
 

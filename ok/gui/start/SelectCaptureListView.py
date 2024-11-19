@@ -22,17 +22,13 @@ class SelectCaptureListView(ListWidget):
             elif device.get('emulator') is not None:
                 title = self.tr("ADB(Supports Background, Slow, High Compatibility, High Latency)")
                 if self.count() == 1:
-                    item = QListWidgetItem(self.tr("Emulator Window(Supports Background, Fast, Low Latency)"))
-                    self.addItem(item)
                     from ok.alas.emulator_windows import Emulator
                     if device.get('emulator') and device.get('emulator').type == Emulator.MuMuPlayer12:
                         item = QListWidgetItem(self.tr("Ipc (MuMuPlayer12 version >= 4.0)"))
                         self.addItem(item)
-                        selected = 2
-                if ok.gui.device_manager.get_preferred_capture() == "windows":
+                        selected = 1
+                if ok.gui.device_manager.get_preferred_capture() == "ipc":
                     selected = 1
-                elif ok.gui.device_manager.get_preferred_capture() == "ipc":
-                    selected = 2
             else:
                 title = self.tr("ADB(Supports Background, Slow, High Compatibility, High Latency)")
                 self.reduce_row_to_1()

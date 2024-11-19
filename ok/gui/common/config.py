@@ -4,7 +4,7 @@ from enum import Enum
 
 from PySide6.QtCore import QLocale
 
-from ok.util.path import get_relative_path
+from ok.Util import get_relative_path
 from qfluentwidgets import (qconfig, QConfig, ConfigItem, OptionsConfigItem, BoolValidator,
                             OptionsValidator, RangeConfigItem, RangeValidator,
                             ConfigSerializer, Theme, EnumSerializer)

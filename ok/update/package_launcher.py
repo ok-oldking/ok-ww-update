@@ -9,7 +9,7 @@ from ok.config.Config import Config
 from ok.logging.Logger import config_logger, get_logger
 from ok.update.GitUpdater import copy_exe_files, fix_version_in_repo
 from ok.update.init_launcher_env import create_launcher_env
-from ok.util.path import dir_checksum, delete_if_exists
+from ok.Util import dir_checksum, delete_if_exists
 
 logger = get_logger(__name__)
 

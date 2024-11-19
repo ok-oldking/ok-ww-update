@@ -16,7 +16,7 @@ from ok.logging.Logger import get_logger
 from typing import Dict
 from typing import List
 
-from ok.util.path import get_path_relative_to_exe
+from ok.Util import get_path_relative_to_exe
 
 logger = get_logger(__name__)
 

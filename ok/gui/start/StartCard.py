@@ -10,7 +10,7 @@ from ok.gui.Communicate import communicate
 from ok.gui.debug.DebugTab import capture
 from ok.gui.widget.StatusBar import StatusBar
 from ok.logging.Logger import get_logger
-from ok.util.Handler import Handler
+from ok.Util import Handler
 
 logger = get_logger(__name__)
 

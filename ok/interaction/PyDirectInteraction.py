@@ -5,7 +5,7 @@ import pydirectinput
 from ok.Capture import BaseCaptureMethod
 from ok.interaction.BaseInteraction import BaseInteraction
 from ok.logging.Logger import get_logger
-from ok.util.win import is_admin
+from ok.Util import is_admin
 
 logger = get_logger(__name__)
 

@@ -2,14 +2,14 @@ import time
 
 from PySide6.QtCore import QObject
 from ok.Capture import BaseWindowsCaptureMethod
+from ok.Util import Handler
+from ok.Util import is_admin
 
 import ok.gui
 from ok.alas.platform_windows import execute
 from ok.gui.Communicate import communicate
 from ok.gui.util.Alert import alert_error
 from ok.logging.Logger import get_logger
-from ok.util.Handler import Handler
-from ok.util.win import is_admin
 
 logger = get_logger(__name__)
 
@@ -113,19 +113,22 @@ class StartController(QObject):
                 'supported_resolution', {})
             supported_ratio = supported_resolution.get('ratio')
             min_size = supported_resolution.get('min_size')
+            resize_to_ratio = supported_resolution.get('resize_to_ratio')
             supported, resolution = ok.gui.executor.check_frame_and_resolution(supported_ratio, min_size)
             if not supported:
-                error = self.tr(
-                    'Resolution {resolution} check failed, some tasks might not work correctly!').format(
-                    resolution=resolution)
-                if supported_ratio:
-                    error += self.tr(', the supported ratio is {supported_ratio}').format(
-                        supported_ratio=supported_ratio)
-                if min_size:
-                    error += self.tr(', the supported min resolution is {min_size}').format(
-                        min_size=f'{min_size[0]}x{min_size[1]}')
-                alert_error(error, True)
-                # return error
+                resize_success = False
+                if resize_to_ratio and isinstance(ok.gui.device_manager.capture_method, BaseWindowsCaptureMethod):
+                    resize_success = ok.gui.device_manager.capture_method.hwnd_window.try_resize_to(supported_ratio)
+                if not resize_success:
+                    error = self.tr(
+                        'Resolution {resolution} check failed, some tasks might not work correctly!').format(
+                        resolution=resolution)
+                    if supported_ratio:
+                        error += self.tr(', the supported ratio is {supported_ratio}').format(
+                            supported_ratio=supported_ratio)
+                    if min_size:
+                        error += self.tr(', the supported min resolution is {min_size}').format(
+                            min_size=f'{min_size[0]}x{min_size[1]}')
             if device and device['device'] == "windows" and not is_admin():
                 return self.tr(
                     f"PC version requires admin privileges, Please restart this app with admin privileges!")

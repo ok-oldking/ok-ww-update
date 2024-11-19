@@ -6,7 +6,7 @@ import json
 import subprocess
 from ok.logging.Logger import config_logger, get_logger
 from ok.update.init_launcher_env import create_app_env
-from ok.util.path import delete_if_exists
+from ok.Util import delete_if_exists
 
 logger = get_logger(__name__)
 

@@ -13,7 +13,7 @@ import ok.gui
 from ok.feature.Box import Box
 from ok.gui.Communicate import communicate
 from ok.logging.Logger import get_logger
-from ok.util.path import find_first_existing_file, clear_folder, sanitize_filename, \
+from ok.Util import find_first_existing_file, clear_folder, sanitize_filename, \
     get_relative_path
 
 logger = get_logger(__name__)

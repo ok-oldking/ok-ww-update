@@ -1,7 +1,7 @@
 import gettext
 import os
 
-from ok.util.path import ensure_dir_for_file, resource_path, get_path_relative_to_exe
+from ok.Util import ensure_dir_for_file, resource_path, get_path_relative_to_exe
 
 
 def __get_root():

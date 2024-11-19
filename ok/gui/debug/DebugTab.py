@@ -17,7 +17,7 @@ from ok.gui.widget.Tab import Tab
 from ok.interaction.DoNothingInteraction import DoNothingInteraction
 from ok.logging.Logger import get_logger, exception_to_str
 from ok.ocr.OCR import OCR
-from ok.util.Handler import Handler
+from ok.Util import Handler
 
 logger = get_logger(__name__)
 

@@ -5,7 +5,7 @@ import re
 import threading
 from ok.gui.Communicate import communicate
 from ok.logging.Logger import get_logger
-from ok.util.path import get_folder_size
+from ok.Util import get_folder_size
 
 logger = get_logger(__name__)
 

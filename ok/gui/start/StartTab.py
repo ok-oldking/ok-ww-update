@@ -63,8 +63,6 @@ class StartTab(Tab):
                 if i == 0:
                     ok.gui.device_manager.set_capture("adb")
                 elif i == 1:
-                    ok.gui.device_manager.set_capture("windows")
-                elif i == 2:
                     ok.gui.device_manager.set_capture("ipc")
             elif device.get('device') == 'windows':
                 ok.gui.device_manager.set_capture("windows")

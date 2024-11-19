@@ -5,7 +5,7 @@ from ok.gui.launcher.LauncherWindow import LauncherWindow
 from ok.gui.util.app import init_app_config, center_window
 from ok.logging.Logger import get_logger, config_logger
 from ok.update.GitUpdater import GitUpdater
-from ok.util.exit_event import ExitEvent
+from ok.Util import ExitEvent
 
 logger = get_logger(__name__)
 
