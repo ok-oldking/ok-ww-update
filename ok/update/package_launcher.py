@@ -4,12 +4,12 @@ import subprocess
 import sys
 
 import git
+from ok.Util import dir_checksum, delete_if_exists
 
 from ok.config.Config import Config
 from ok.logging.Logger import config_logger, get_logger
 from ok.update.GitUpdater import copy_exe_files, fix_version_in_repo
 from ok.update.init_launcher_env import create_launcher_env
-from ok.Util import dir_checksum, delete_if_exists
 
 logger = get_logger(__name__)
 
@@ -36,6 +36,7 @@ if __name__ == "__main__":
     try:
         # Get the folder path from the command line arguments
         tag = sys.argv[1]
+        files_filename = sys.argv[2]
 
         logger.info(f'Tag: {tag}')
         build_dir = os.path.join(os.getcwd(), 'dist')
@@ -63,13 +64,25 @@ if __name__ == "__main__":
 
         logger.info(f'copied {git_dir} to {target_git_dir}')
 
-        current_repo = git.Repo(os.getcwd())
-        url = current_repo.remote('origin').url
-        logger.info(f'Repository URL: {url}')
-
         repo_dir = os.path.join(build_dir, 'repo', tag)
-        build_repo = git.Repo.clone_from(url, repo_dir, branch=tag, depth=1)
-        logger.info(f'Cloned repository to: {repo_dir}')
+
+        os.makedirs(repo_dir, exist_ok=True)
+
+        # Read the list of files from the file
+        try:
+            with open(files_filename, 'r') as file:
+                files_to_copy = [line.strip() for line in file.readlines()]
+        except FileNotFoundError:
+            print(f"Error: File '{files_filename}' not found.")
+            sys.exit(1)
+
+        logger.info(f'start to copy files {files_to_copy} to: {repo_dir}')
+
+        for item in files_to_copy:
+            if os.path.isfile(item):
+                shutil.copy(item, repo_dir)  # Copy file
+            elif os.path.isdir(item):
+                shutil.copytree(item, os.path.join(repo_dir, os.path.basename(item)))  # Copy directory
 
         updater_exe = os.path.join(repo_dir, 'updater.exe')
         if os.path.exists(updater_exe):

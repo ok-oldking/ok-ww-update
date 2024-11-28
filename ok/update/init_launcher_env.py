@@ -1,8 +1,9 @@
-import sys
-
+import json
 import os
 import re
 import subprocess
+import sys
+
 from ok.logging.Logger import config_logger, get_logger
 from ok.update.GitUpdater import replace_ok_script_ver
 from ok.update.python_env import delete_files, \
@@ -53,6 +54,9 @@ def create_app_env(code_dir, build_dir, dependencies):
 
 
 def create_launcher_env(code_dir='.', build_dir='.'):
+    launcher_json_file = os.path.join(code_dir, 'launcher.json')
+    with open(launcher_json_file, 'r') as file:
+        launcher_json = json.load(file)
     full_version = find_line_in_requirements(os.path.join(code_dir, 'requirements.txt'), 'ok-script')
     if not full_version:
         logger.error('Could not find ok-script version in requirements.txt')
@@ -61,7 +65,7 @@ def create_launcher_env(code_dir='.', build_dir='.'):
     lenv_path = create_venv('launcher_env', os.path.join(build_dir))
     try:
         lenv_python_exe = os.path.join(lenv_path, 'Scripts', 'python.exe')
-        params = [lenv_python_exe, "-m", "pip", "install", "PySide6-Fluent-Widgets==1.5.5", '--no-deps',
+        params = [lenv_python_exe, "-m", "pip", "install", "PySide6-Fluent-Widgets==1.7.1", '--no-deps',
                   '--no-cache-dir']
         result = subprocess.run(params, check=True, capture_output=True, text=True)
         logger.info("install PySide6-Fluent-Widgets success")

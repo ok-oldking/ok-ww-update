@@ -1,9 +1,8 @@
-import sys
-
 import os
 import shutil
 import stat
 import subprocess
+import sys
 
 
 def run_command(command):
@@ -37,7 +36,20 @@ def main():
     files_index = sys.argv.index('--files') + 1
 
     repo_urls = sys.argv[repos_index:files_index - 1]
-    files_to_copy = sys.argv[files_index:]
+
+    files_filename = sys.argv[files_index]
+
+    # Read the list of files from the file
+    try:
+        with open(files_filename, 'r') as file:
+            files_to_copy = [line.strip() for line in file.readlines()]
+    except FileNotFoundError:
+        print(f"Error: File '{files_filename}' not found.")
+        sys.exit(1)
+
+    # Now you have repo_urls and files_to_copy lists
+    print("Repositories:", repo_urls)
+    print("Files to copy:", files_to_copy)
 
     print(repo_urls, files_to_copy)
 
