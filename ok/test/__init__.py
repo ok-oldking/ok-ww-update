@@ -16,3 +16,4 @@ def init_ok(config):
             ok.device_manager.exit_event, [])
         ok.device_manager.interaction = DoNothingInteraction(
             ok.device_manager.capture_method)
+        ok.app

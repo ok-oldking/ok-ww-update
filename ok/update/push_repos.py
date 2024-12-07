@@ -1,17 +1,23 @@
+import sys
+
 import os
 import shutil
 import stat
 import subprocess
-import sys
 
 
 def run_command(command):
+    print(f'Running command: {command}')
     result = subprocess.run(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
                             encoding='utf-8')
-    if result.returncode != 0:
-        print(f"Warning: Command '{command}' failed with error:\n{result.stderr.strip()} \n{result.stdout.strip()}")
-        raise Exception(f"Command '{command}' failed with error:\n{result.stderr.strip()}")
-    return result.stdout.strip()
+    try:
+        if result.returncode != 0:
+            print(f"Warning: Command '{command}' failed with error:\n{result.stderr.strip()} \n{result.stdout.strip()}")
+            raise Exception(f"Command '{command}' failed with error:\n{result.stderr.strip()}")
+        return result.stdout.strip()
+    except Exception as e:
+        print(f"Warning: Command '{command}' failed with error:\n{e}")
+        return ""
 
 
 def on_rm_error(func, path, exc_info):
@@ -25,6 +31,55 @@ def get_current_branch():
 
 def get_latest_commit_message():
     return run_command("git log -1 --pretty=%B").strip()
+
+
+def tag_exists(tag_name):
+    tags = run_command("git tag").split('\n')
+    return tag_name in tags
+
+
+def remove_history_before_tag(tag_name):
+    print(f"remove_history_before_tag {tag_name}")
+    if tag_exists(tag_name):
+        print(f"remove_history_before_tag tag_exists {tag_name}")
+        run_command(f"git checkout {tag_name}")
+        run_command(f"git checkout -b new-master")
+        run_command(f"git checkout master")
+        run_command(f"git reset --hard lts")
+        run_command("git push --force origin master")
+
+
+# def run_command(command):
+#     result = subprocess.run(command, shell=True, check=True, text=True, capture_output=True)
+#     print(result.stdout)
+#     return result.stdout
+#
+# def remove_history_before_tag(tag_name):
+#     print(f"Attempting to remove history before tag: {tag_name}")
+#     if tag_exists(tag_name):
+#         print(f"Tag {tag_name} exists")
+#
+#         # Reset to the tag
+#         run_command(f"git reset --hard {tag_name}")
+#
+#         # Create a temporary rebase script file
+#         with open('rebase-script.txt', 'w') as file:
+#             file.write('pick' * (len(run_command('git rev-list --count --reverse HEAD..{tag_name}').strip().split(
+#                 '\n')) - 1) + "\n")
+#
+#         # Run the rebase using the script
+#         run_command(f"git rebase --root --autosquash -i --rebase-merges -s 'rebase-script.txt'")
+#
+#         # Clean up the temporary script file
+#         os.remove('rebase-script.txt')
+#
+#         print("Finished rebase")
+#         run_command("git filter-branch -- --all")
+#         print("Finished filter-branch")
+#         run_command(f"git push --force origin master")
+#         print("Finished push")
+#     else:
+#         print(f"Tag {tag_name} does not exist")
 
 
 def main():
@@ -106,6 +161,7 @@ def main():
             src = os.path.join(os.getcwd(), item)
             dest = os.path.join(target_repo_path, item)
             try:
+                print(f'copy {src} to {dest}')
                 if os.path.isdir(src):
                     shutil.copytree(src, dest)
                 else:
@@ -117,7 +173,10 @@ def main():
         os.chdir(target_repo_path)
 
         # Add the copied files and folders to the git index
-        run_command("git rm -r --cached .")
+        try:
+            run_command("git rm -r --cached .")
+        except:
+            print(f"git rm -r --cached error")
         run_command("git add .")
         try:
             run_command(f'git commit -m "{latest_commit_message}"')
@@ -129,7 +188,8 @@ def main():
         for tag in current_tags:
             if tag:
                 try:
-                    run_command(f"git tag -d {tag}")
+                    if tag_exists(tag):
+                        run_command(f"git tag -d {tag}")
                 except Exception as e:
                     print(f"Error: {tag} could not be deleted.")
                 run_command(f'git tag {tag} -m "add {tag}"')
@@ -138,10 +198,11 @@ def main():
 
         run_command(f"git push origin --tags --force")
 
+        # Check and remove history before 'lts' tag if it exists
+        # remove_history_before_tag('lts')
+
     print("Operation completed successfully for all repositories.")
 
 
 if __name__ == "__main__":
     main()
-
-# python -m ok.update.push_repos --repos https://github.com/ok-oldking/test --files src ok config.py launcher.json launcher.py main.py ok-ww.exe main.py main_debug.py main_gpu.py main_gpu_debug.py assets i18n icon.png requirements.txt
