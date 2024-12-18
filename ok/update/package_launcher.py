@@ -4,14 +4,14 @@ import subprocess
 import sys
 
 import git
-from ok.Util import dir_checksum, delete_if_exists
 
-from ok.config.Config import Config
-from ok.logging.Logger import config_logger, get_logger
+from ok import Config
+from ok import config_logger, Logger
+from ok import dir_checksum, delete_if_exists
 from ok.update.GitUpdater import copy_exe_files, fix_version_in_repo
 from ok.update.init_launcher_env import create_launcher_env
 
-logger = get_logger(__name__)
+logger = Logger.get_logger(__name__)
 
 
 def write_checksum_to_file(folder_path):

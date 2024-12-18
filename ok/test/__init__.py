@@ -1,5 +1,4 @@
-from ok.Capture import ImageCaptureMethod
-
+from ok import ImageCaptureMethod
 from ok.interaction.DoNothingInteraction import DoNothingInteraction
 
 ok = None
@@ -8,7 +7,7 @@ ok = None
 def init_ok(config):
     global ok
     if ok is None:
-        from ok.OK import OK
+        from ok import OK
         config['debug'] = True
         ok = OK(config)
         ok.task_executor.debug_mode = True
@@ -17,3 +16,10 @@ def init_ok(config):
         ok.device_manager.interaction = DoNothingInteraction(
             ok.device_manager.capture_method)
         ok.app
+        ok.task_executor.start()
+
+
+def destroy_ok():
+    global ok
+    if ok is not None:
+        ok.quit()

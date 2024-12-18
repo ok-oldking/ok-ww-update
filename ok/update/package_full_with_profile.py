@@ -1,14 +1,13 @@
+import json
+import os.path
+import subprocess
 import sys
 
-import os.path
-
-import json
-import subprocess
-from ok.logging.Logger import config_logger, get_logger
+from ok import config_logger, Logger
+from ok import delete_if_exists
 from ok.update.init_launcher_env import create_app_env
-from ok.Util import delete_if_exists
 
-logger = get_logger(__name__)
+logger = Logger.get_logger(__name__)
 
 if __name__ == "__main__":
     config_logger(name='build')

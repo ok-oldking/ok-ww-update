@@ -4,12 +4,12 @@ import re
 import subprocess
 import sys
 
-from ok.logging.Logger import config_logger, get_logger
+from ok import config_logger, Logger
 from ok.update.GitUpdater import replace_ok_script_ver
 from ok.update.python_env import delete_files, \
     create_venv, find_line_in_requirements
 
-logger = get_logger(__name__)
+logger = Logger.get_logger(__name__)
 
 
 def replace_string_in_file(file_path, old_pattern, new_string):

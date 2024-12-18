@@ -1,5 +1,6 @@
 from ctypes import c_uint32, c_void_p
 
+from ok import rotypes
 from ok.rotypes.idldsl import define_winrt_com_method, _non_activatable_init, _static_method, runtimeclass, GUID
 from ok.rotypes.inspectable import IInspectable
 
