@@ -6,7 +6,7 @@ from qfluentwidgets import FluentIcon, NavigationItemPosition, MSFluentWindow, I
 from ok import Config
 from ok import ConfigOption
 from ok import Logger
-from ok import _init_class_by_name
+from ok import init_class_by_name
 from ok import og
 from ok.gui.Communicate import communicate
 from ok.gui.about.AboutTab import AboutTab
@@ -62,7 +62,7 @@ class MainWindow(MSFluentWindow):
 
         if custom_tabs := config.get('custom_tabs'):
             for tab in custom_tabs:
-                tab_obj = _init_class_by_name(tab[0], tab[1])
+                tab_obj = init_class_by_name(tab[0], tab[1])
                 tab_obj.executor = og.executor
                 self.addSubInterface(tab_obj, tab_obj.icon, tab_obj.name)
 
