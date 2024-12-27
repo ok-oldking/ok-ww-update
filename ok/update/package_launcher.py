@@ -8,8 +8,8 @@ import git
 from ok import Config
 from ok import config_logger, Logger
 from ok import dir_checksum, delete_if_exists
-from ok.update.GitUpdater import copy_exe_files, fix_version_in_repo
-from ok.update.init_launcher_env import create_launcher_env
+from ok.update.GitUpdater import copy_exe_files, remove_ok_requirements
+from ok.update.init_launcher_env import create_repo_venv
 
 logger = Logger.get_logger(__name__)
 
@@ -84,21 +84,14 @@ if __name__ == "__main__":
             elif os.path.isdir(item):
                 shutil.copytree(item, os.path.join(repo_dir, os.path.basename(item)))  # Copy directory
 
-        updater_exe = os.path.join(repo_dir, 'updater.exe')
-        if os.path.exists(updater_exe):
-            logger.info('handle legacy updater.exe')
-            target_updater_dir = os.path.join(build_dir, '_internal', 'ok', 'binaries')
-            os.makedirs(target_updater_dir)
-            shutil.copy(updater_exe, target_updater_dir)
-
-        fix_version_in_repo(repo_dir, tag)
+        remove_ok_requirements(repo_dir, tag)
 
         delete_if_exists(os.path.join(repo_dir, '.git'))
         logger.info(f'Deleted .git directory in: {repo_dir}')
 
         copy_exe_files(repo_dir, build_dir)
 
-        if not create_launcher_env(repo_dir, build_dir):
+        if not create_repo_venv(python_dir, repo_dir):
             sys.exit(1)
 
         config = Config('launcher', {
@@ -110,5 +103,5 @@ if __name__ == "__main__":
         logger.info('Configuration created successfully.')
 
     except Exception as e:
-        logger.info(f'Error: {e}')
+        logger.error(f'Error:', e)
         sys.exit(1)

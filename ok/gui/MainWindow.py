@@ -1,7 +1,7 @@
-from PySide6.QtCore import Signal, Qt, QEvent, QSize
+from PySide6.QtCore import Signal, Qt, QEvent, QSize, QCoreApplication
 from PySide6.QtGui import QScreen
 from PySide6.QtWidgets import QMenu, QSystemTrayIcon
-from qfluentwidgets import FluentIcon, NavigationItemPosition, MSFluentWindow, InfoBar, InfoBarPosition
+from qfluentwidgets import FluentIcon, NavigationItemPosition, MSFluentWindow, InfoBar, InfoBarPosition, MessageBox
 
 from ok import Config
 from ok import ConfigOption
@@ -71,12 +71,9 @@ class MainWindow(MSFluentWindow):
             self.addSubInterface(debug_tab, FluentIcon.DEVELOPER_TOOLS, self.tr('Debug'),
                                  position=NavigationItemPosition.BOTTOM)
 
-        if about:
-            self.about_tab = AboutTab(config)
-            self.addSubInterface(self.about_tab, FluentIcon.QUESTION, self.tr('About'),
-                                 position=NavigationItemPosition.BOTTOM)
-        else:
-            self.about_tab = None
+        self.about_tab = AboutTab(config, self.app.updater)
+        self.addSubInterface(self.about_tab, FluentIcon.QUESTION, self.tr('About'),
+                             position=NavigationItemPosition.BOTTOM)
 
         if config.get('auth'):
             self.act_tab = ActTab(config)
@@ -95,11 +92,12 @@ class MainWindow(MSFluentWindow):
         communicate.executor_paused.connect(self.executor_paused)
         communicate.tab.connect(self.navigate_tab)
         communicate.task_done.connect(self.activateWindow)
+        communicate.must_update.connect(self.must_update)
 
         # Create a context menu for the tray
         menu = QMenu()
         exit_action = menu.addAction(self.tr("Exit"))
-        exit_action.triggered.connect(self.exit_event.set)
+        exit_action.triggered.connect(self.tray_quit)
 
         self.tray = QSystemTrayIcon(icon, parent=self)
 
@@ -121,6 +119,24 @@ class MainWindow(MSFluentWindow):
             self.switchTo(self.about_tab)
         og.handler.post(self.do_check_auth, delay=20 * 60)
         logger.info('main window __init__ done')
+
+    def tray_quit(self):
+        logger.info('main window tray_quit')
+        self.app.quit()
+
+    def must_update(self):
+        logger.info('must_update show_window')
+        title = self.tr('Update')
+        content = QCoreApplication.translate('app', 'The current version {} must be updated').format(
+            og.app.updater.starting_version)
+        w = MessageBox(title, content, self.window())
+        og.executor.pause()
+        if w.exec():
+            logger.info('Yes button is pressed')
+            og.app.updater.run()
+        else:
+            logger.info('No button is pressed')
+            self.app.quit()
 
     def showEvent(self, event):
         if event.type() == QEvent.Show:

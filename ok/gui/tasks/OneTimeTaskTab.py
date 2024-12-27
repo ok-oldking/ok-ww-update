@@ -12,7 +12,7 @@ class OneTimeTaskTab(TaskTab):
 
         for task in og.executor.onetime_tasks:
             task_card = TaskCard(task, True)
-            self.addWidget(task_card)
+            self.add_widget(task_card)
         self.keep_info_when_done = True
 
     def in_current_list(self, task):

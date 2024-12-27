@@ -1,6 +1,6 @@
 from PySide6.QtCore import QCoreApplication
 from PySide6.QtWidgets import QWidget, QHBoxLayout, QSpacerItem, QSizePolicy, QVBoxLayout
-from qfluentwidgets import PushButton, ComboBox, FluentIcon, PrimaryPushButton, BodyLabel
+from qfluentwidgets import PushButton, ComboBox, FluentIcon, PrimaryPushButton, BodyLabel, StateToolTip
 
 from ok import Logger
 from ok.gui.Communicate import communicate
@@ -16,7 +16,7 @@ class UpdateBar(QWidget):
     def __init__(self, config, updater: GitUpdater):
         super().__init__()
         self.updater = updater
-
+        self.state_tooltip = None
         self.layout = QVBoxLayout()
 
         # self.log_scroll_area = SmoothScrollArea()
@@ -37,9 +37,6 @@ class UpdateBar(QWidget):
         self.hbox_layout.addItem(QSpacerItem(0, 0, QSizePolicy.Expanding, QSizePolicy.Minimum))
         self.hbox_layout.setSpacing(20)
 
-        # self.version_log_hbox_layout = QHBoxLayout()
-        self.layout.addWidget(self.version_log_label)
-
         # self.version_log_hbox_layout.addWidget(self.log_scroll_area)
 
         self.update_hbox_layout = QHBoxLayout()
@@ -48,10 +45,6 @@ class UpdateBar(QWidget):
         self.update_hbox_layout.setSpacing(20)
 
         communicate.update_logs.connect(self.update_logs)
-
-        self.delete_dependencies_button = PushButton(self.tr("Delete Downloaded Dependencies"), icon=FluentIcon.DELETE)
-        self.delete_dependencies_button.clicked.connect(self.updater.clear_dependencies)
-        self.hbox_layout.addWidget(self.delete_dependencies_button)
 
         communicate.versions.connect(self.update_versions)
         communicate.update_running.connect(self.update_running)
@@ -84,8 +77,8 @@ class UpdateBar(QWidget):
         self.current_version = ComboBox()
         self.update_hbox_layout.addWidget(self.current_version)
         self.update_hbox_layout.addWidget(self.version_label_target)
-        self.current_version.addItems([self.updater.launcher_config.get(
-            'app_version')])
+        self.current_version.addItems([self.updater.app_config.get(
+            'version')])
         self.version_label.setText(self.tr('Current Version:'))
         self.version_label_target.setText(self.tr('TargetVersion:'))
 
@@ -97,9 +90,16 @@ class UpdateBar(QWidget):
         self.update_button.clicked.connect(self.update_clicked)
         self.update_hbox_layout.addWidget(self.update_button)
 
-        self.set_op_btn_visible(False)
+        self.set_op_btn_enabled(False)
+
+        # self.version_log_hbox_layout = QHBoxLayout()
+        self.layout.addWidget(self.version_log_label)
 
         self.setLayout(self.layout)
+        self.version_log_label.setText(self.updater.update_logs or self.tr("Checking for Updates..."))
+        self.update_logs()
+
+        self.update_versions()
 
     def update_source(self):
         if self.update_sources.currentText():
@@ -120,42 +120,54 @@ class UpdateBar(QWidget):
                 self.update_button.setIcon(icon=FluentIcon.DOWN)
             self.update_button.setDisabled(cmp == 0)
 
-    def update_logs(self, logs):
-        if logs:
-            self.version_log_label.setText(logs)
+    def update_logs(self):
+        if self.updater.update_logs:
+            self.version_log_label.setText(self.updater.update_logs)
         else:
             self.version_log_label.setText(self.tr("This is the newest version"))
-        self.version_log_label.setVisible(logs is not None)
+        self.version_log_label.setVisible(self.updater.update_logs is not None and self.updater.update_logs != "")
 
     def update_clicked(self):
         self.updater.update_to_version(self.version_list.currentText())
         self.update_button.setDisabled(True)
         self.check_update_button.setDisabled(True)
 
-    def update_running(self, running):
+    def update_running(self, running, updating=False):
         logger.info(f'update_running {running}')
         self.update_button.setDisabled(running)
         self.check_update_button.setDisabled(running)
         self.update_sources.setDisabled(running)
         self.version_list.setDisabled(running)
-        self.delete_dependencies_button.setDisabled(running)
-        self.set_op_btn_visible(not running)
-        if running:
-            self.version_log_label.setText(self.tr("Checking for Updates..."))
+        self.set_op_btn_enabled(not running)
 
-    def update_versions(self, versions):
-        if not versions:  # fetch version error
+        if self.state_tooltip is None:
+            self.state_tooltip = StateToolTip(
+                self.tr('Checking for Update...'), "", self.window())
+            self.state_tooltip.move(self.state_tooltip.getSuitablePos())
+            self.state_tooltip.contentLabel.hide()
+        if running:
+            self.state_tooltip.setTitle(
+                self.tr('Updating' if updating else 'Checking for Update...'))
+            self.state_tooltip.setState(False)
+            self.state_tooltip.show()
+        else:
+            self.state_tooltip.hide()
+            self.state_tooltip.setState(True)
+            self.state_tooltip = None
+
+    def update_versions(self):
+        if not self.updater.versions:  # fetch version error
             self.version_list.clear()
             self.version_label.setText(self.tr("This is the newest version"))
         else:
             current_items = [self.version_list.itemText(i) for i in range(self.version_list.count())]
-            if current_items != versions:
+            if current_items != self.updater.versions:
                 self.version_list.clear()
-                self.version_list.addItems(versions)
-                self.set_op_btn_visible(len(versions) != 0)
+                self.version_list.addItems(self.updater.versions)
+                self.set_op_btn_enabled(len(self.updater.versions) != 0)
 
-    def set_op_btn_visible(self, visible):
+    def set_op_btn_enabled(self, enabled):
         for i in reversed(range(self.update_hbox_layout.count())):
             widget = self.update_hbox_layout.itemAt(i).widget()
             if widget is not None:
-                widget.setVisible(visible)
+                widget.setEnabled(enabled)

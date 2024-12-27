@@ -12,7 +12,7 @@ class TriggerTaskTab(TaskTab):
 
         for task in og.executor.trigger_tasks:
             task_card = TaskCard(task, False)
-            self.addWidget(task_card)
+            self.add_widget(task_card)
 
     def in_current_list(self, task):
         return task in og.executor.trigger_tasks

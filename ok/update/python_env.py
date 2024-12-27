@@ -1,3 +1,4 @@
+import os
 import shutil
 import subprocess
 import sys
@@ -5,11 +6,9 @@ import sys
 import psutil
 
 from ok import Logger
-from ok import delete_if_exists
 
 logger = Logger.get_logger(__name__)
 
-import os
 import fnmatch
 
 
@@ -21,6 +20,7 @@ def delete_files(
                             'Qt6Designer.dll'
             , 'openvino_pytorch_frontend.dll', 'openvino_tensorflow_frontend.dll', 'NEWS.txt',
                             'py_tensorflow_frontend.cp311-win_amd64.pyd', 'py_pytorch_frontend.cp311-win_amd64.pyd',
+                            '__pycache__',
                             '*.exe'],
         whitelist_patterns=['adb.exe', 't64.exe', 'w64.exe', 'cli-64.exe', 'cli.exe', 'python*.exe', '*pip*'],
         root_dir='python'):
@@ -128,23 +128,51 @@ def copy_python_files(python_dir, destination_dir):
                 logger.info(f"Copied folder {item} to {destination_dir}")
 
 
-def modify_venv_cfg(env_dir):
-    python_dir = os.path.dirname(env_dir)
-    file_path = os.path.join(env_dir, 'pyvenv.cfg')
-    if os.path.exists(file_path):
-        with open(file_path, 'r', encoding='utf-8') as file:
-            lines = file.readlines()
+def modify_venv_cfg(env_dir, python_dir):
+    """
+    Modifies the pyvenv.cfg file in a virtual environment.
+    Adds missing lines if they don't exist.
+    """
 
+    if not os.path.isabs(env_dir):
+        env_dir = os.path.abspath(env_dir)
+    if not os.path.isabs(python_dir):
+        python_dir = os.path.abspath(python_dir)
+    os.environ['VIRTUAL_ENV'] = env_dir
+    logger.info(f'modify_venv_cfg {env_dir} {python_dir}')
+
+    file_path = os.path.join(env_dir, 'pyvenv.cfg')
+    if not os.path.exists(file_path):
+        logger.info(f"No pyvenv.cfg found in {env_dir}")
         with open(file_path, 'w', encoding='utf-8') as file:
-            for line in lines:
-                if line.startswith('home ='):
-                    file.write(f'home = {python_dir}\n')
-                elif line.startswith('executable ='):
-                    file.write(f'executable = {os.path.join(python_dir, "python.exe")}\n')
-                elif line.startswith('command ='):
-                    file.write(f'command = {os.path.join(python_dir, "python.exe")} -m venv {env_dir}')
-                else:
-                    file.write(line)
+            file.write(f"home = {python_dir}\n")
+            file.write(f"executable = {os.path.join(python_dir, 'python.exe')}\n")
+            return
+
+    required_lines = {
+        'home': f'home = {python_dir}\n',
+        'executable': f'executable = {os.path.join(python_dir, "python.exe")}\n',
+        'command': f'command = {os.path.join(python_dir, "python.exe")} -m venv {env_dir}\n',
+        'base-executable': f'base-executable = {os.path.join(python_dir, "python.exe")}\n',
+        'base-exec-prefix': f'base-exec-prefix = {python_dir}\n',
+        'base-prefix': f'base-prefix = {python_dir}\n',
+    }
+
+    existing_lines = {}
+    with open(file_path, 'r', encoding='utf-8') as file:
+        for line in file:
+            for key in required_lines:
+                if line.startswith(key + ' ='):
+                    existing_lines[key] = line.strip()  # Store the line without trailing newline
+                    break  # prevent double check same line
+
+    with open(file_path, 'w', encoding='utf-8') as file:
+        for key, required_line in required_lines.items():
+            if key in existing_lines:
+                file.write(existing_lines[key] + '\n')
+            else:
+                logger.info(f"Adding missing line: {required_line.strip()} to pyvenv.cfg")
+                file.write(required_line)
 
 
 def get_env_path(name, dir=None):
@@ -153,56 +181,50 @@ def get_env_path(name, dir=None):
     return os.path.join(dir, 'python', name)
 
 
-def create_venv(name, dir=None):
-    if dir is None:
-        dir = os.getcwd()
-    mini_python_exe = os.path.join(dir, 'python', 'python.exe')
-    lenv_path = get_env_path(name, dir)
-    modify_venv_cfg(env_dir=lenv_path)
-    ok = False
-
-    if not os.path.exists(lenv_path):
-        local_path = os.path.join(os.getcwd(), '.venv')
-        if os.path.isdir(local_path):
-            logger.info(f'local dev env use local')
-            lenv_path = local_path
-
-    if os.path.exists(lenv_path):
-        logger.info(f'venv already exists: {lenv_path}')
-        try:
-            result = subprocess.run([os.path.join(lenv_path, 'Scripts', 'python.exe'), '--version'],
-                                    capture_output=True,
-                                    text=True)
-
-            # Get the output
-            output = result.stdout.strip() or result.stderr.strip()
-
-            # Check if the output starts with "Python" and ends with a version number
-            if output.startswith("Python") and output.split()[1].replace('.', '').isdigit():
-                logger.info(f'venv check ok : {output}')
-                ok = True
-            else:
-                logger.info(f'venv check error : {output}')
-                kill_exe(lenv_path)
-                delete_if_exists(lenv_path)
-        except Exception as e:
-            logger.error(f'venv check error : {e}')
-            kill_exe(lenv_path)
-    if not ok:
-        delete_if_exists(lenv_path)
-        # Execute the command to create a virtual environment
-        result = subprocess.run([mini_python_exe, '-m', 'venv', lenv_path], check=True, capture_output=True, text=True)
-        logger.info(f"Virtual environment {lenv_path} created successfully.")
-        logger.info(result.stdout)
-        modify_venv_cfg(env_dir=lenv_path)
+def create_venv(python_dir, code_dir, last_env_folder):
+    mini_python_exe = os.path.join(python_dir, 'python.exe')
+    new_venv_dir = os.path.join(code_dir, '.venv')
+    if os.path.exists(new_venv_dir):
+        shutil.rmtree(new_venv_dir)
+    result = subprocess.run([mini_python_exe, '-m', 'venv', '--copies', new_venv_dir],
+                            capture_output=True, encoding='utf-8',
+                            text=True)
+    logger.info(f'create venv {new_venv_dir} {result.stdout}')
+    if last_env_folder:
+        if os.path.exists(last_env_folder):
+            copytree_no_overwrite(last_env_folder, new_venv_dir)
+            logger.info(f"copied new venv folder {new_venv_dir}")
     logger.info('modify venv.cfg done')
-    return lenv_path
+    return new_venv_dir
+
+
+def copytree_no_overwrite(src, dst):
+    for item in os.listdir(src):
+        s = os.path.join(src, item)
+        d = os.path.join(dst, item)
+
+        # Exclude folders named '__pycache__' and those starting with '~'
+        if os.path.isdir(s) and (item == '__pycache__' or item.startswith('~')):
+            continue
+
+        if os.path.isdir(s):
+            if not os.path.exists(d):
+                logger.debug(f'copy tree {s} -> {d}')
+                shutil.copytree(s, d, copy_function=shutil.copy2, dirs_exist_ok=True)
+            else:
+                copytree_no_overwrite(s, d)
+        else:
+            if not os.path.exists(d):
+                shutil.copy2(s, d)
+                logger.debug(f'copying {s} -> {d}')
+            else:
+                logger.debug(f'skip copy {s} -> {d}')
 
 
 def kill_exe(relative_path):
     try:
         for proc in psutil.process_iter(['pid', 'name', 'exe']):
-            if proc.info['name'] == 'adb.exe' and os.path.normpath(proc.info['exe']).startswith(
+            if proc.info['exe'] and os.path.normpath(proc.info['exe']).startswith(
                     os.path.abspath(relative_path)):
                 logger.info(f'try kill the exe {proc.info}')
                 proc.kill()

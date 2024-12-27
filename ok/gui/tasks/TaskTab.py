@@ -19,8 +19,8 @@ class TaskTab(Tab):
         self.last_task = None
         self.task_info_table = TooltipTableWidget(width_percentages=[0.3, 0.7])
         self.task_info_table.setFixedHeight(300)
-        self.task_info_container = self.addCard(self.tr("Choose Window"), self.task_info_table)
-        self.addWidget(self.task_info_container)
+        self.task_info_container = self.add_card(self.tr("Choose Window"), self.task_info_table)
+        self.add_widget(self.task_info_container)
 
         self.task_info_labels = [self.tr('Info'), self.tr('Value')]
         self.task_info_table.setColumnCount(len(self.task_info_labels))  # Name and Value

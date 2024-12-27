@@ -1,13 +1,11 @@
-import json
+import filecmp
 import os
 import re
 import subprocess
-import sys
 
-from ok import config_logger, Logger
-from ok.update.GitUpdater import replace_ok_script_ver
+from ok import Logger
 from ok.update.python_env import delete_files, \
-    create_venv, find_line_in_requirements
+    create_venv
 
 logger = Logger.get_logger(__name__)
 
@@ -35,78 +33,65 @@ def replace_string_in_file(file_path, old_pattern, new_string):
     logger.info(f"Replaced pattern '{old_pattern}' with '{new_string}' in {file_path}")
 
 
-def create_app_env(code_dir, build_dir, dependencies):
-    full_version = find_line_in_requirements(os.path.join(code_dir, 'requirements.txt'), 'ok-script')
-    if not full_version:
-        logger.error('Could not find ok-script version in requirements.txt')
-        return
-    logger.info(f'ok-script full_version: {full_version}')
-    env_path = create_venv('app_env', os.path.join(build_dir))
+def create_repo_venv(python_dir, code_dir='.', last_env_folder=None, index_url="https://pypi.org/simple/"):
+    logger.info(f'create_repo_venv: {python_dir} {code_dir} {last_env_folder} {index_url}')
+    lenv_path = create_venv(python_dir, code_dir, last_env_folder)
+    # return
     try:
-        env_python_exe = os.path.join(env_path, 'Scripts', 'python.exe')
-        for dependency in dependencies:
-            dependency = replace_ok_script_ver(dependency, full_version)
-            subprocess.run([env_python_exe, "-m", "pip", "install"] + dependency.split())
-        delete_files(root_dir=env_path)
+        python_executable = os.path.join(lenv_path, 'Scripts', 'python')
+        if not os.path.exists(os.path.join(lenv_path, 'Scripts', 'pip-sync.exe')):
+            logger.info(f'pip-sync.exe not found, install using pip')
+            params_install = [python_executable, '-m', 'pip', "install", "pip-tools", "-i", index_url, '--no-cache']
+            print(f"Running command: {' '.join(params_install)}")
+            result_install = subprocess.run(params_install, check=True, cwd=code_dir, capture_output=True,
+                                            encoding='utf-8',
+                                            text=True)
+
+            logger.info("\n--- pip install pip-tools Output ---")
+            logger.info("Standard Output:")
+            logger.info(result_install.stdout)
+            logger.info("Standard Error:")
+            logger.info(result_install.stderr)
+
+        # Run pip-sync
+        requirements = os.path.join(code_dir, 'requirements.txt')
+        if last_env_folder:
+            old_code_path = os.path.dirname(last_env_folder)
+            old_requirements = os.path.join(old_code_path, 'requirements.txt')
+        else:
+            old_requirements = None
+
+        if not files_exist(requirements, old_requirements) or not files_content_equal(requirements, old_requirements):
+            params_sync = [python_executable, '-m', 'piptools', 'sync', requirements, '--python-executable',
+                           python_executable, "-i", index_url, '--pip-args',
+                           '"--no-cache"']
+            logger.info(f"\nRunning command: {' '.join(params_sync)}")
+            result_sync = subprocess.run(params_sync, check=True, cwd=code_dir, capture_output=True, encoding='utf-8',
+                                         text=True)
+
+            logger.info("\n--- pip-sync Output ---")
+            logger.info("Standard Output:")
+            logger.info(result_sync.stdout)
+            logger.info("Standard Error:")
+            logger.info(result_sync.stderr)
+            logger.info("sync requirements success")
+            if not last_env_folder:
+                delete_files(root_dir=python_dir)
+                delete_files(root_dir=lenv_path)
+            logger.info(
+                f"requirements not equal use pip-sync '{requirements}' and '{old_requirements}' exist and their contents are equal.")
+        else:
+            logger.info(
+                f"requirements equal skip pip-sync '{requirements}' and '{old_requirements}' exist and their contents are equal.")
+
         return True
     except Exception as e:
         logger.error("An error occurred while creating the virtual environment.", e)
 
 
-def create_launcher_env(code_dir='.', build_dir='.'):
-    launcher_json_file = os.path.join(code_dir, 'launcher.json')
-    with open(launcher_json_file, 'r') as file:
-        launcher_json = json.load(file)
-    full_version = find_line_in_requirements(os.path.join(code_dir, 'requirements.txt'), 'ok-script')
-    if not full_version:
-        logger.error('Could not find ok-script version in requirements.txt')
-        return
-    logger.info(f'ok-script full_version: {full_version}')
-    lenv_path = create_venv('launcher_env', os.path.join(build_dir))
-    try:
-        lenv_python_exe = os.path.join(lenv_path, 'Scripts', 'python.exe')
-        params = [lenv_python_exe, "-m", "pip", "install", "PySide6-Fluent-Widgets==1.7.1", '--no-deps',
-                  '--no-cache-dir']
-        result = subprocess.run(params, check=True, capture_output=True, text=True)
-        logger.info("install PySide6-Fluent-Widgets success")
-        logger.info(result.stdout)
-
-        params = [lenv_python_exe, "-m", "pip", "install",
-                  full_version,
-                  '--no-cache-dir']
-        result = subprocess.run(params, check=True, capture_output=True, text=True)
-        logger.info("install ok-script success")
-        logger.info(result.stdout)
-        delete_files(root_dir=lenv_path)
-        return True
-    except Exception as e:
-        logger.error("An error occurred while creating the virtual environment.", e)
+def files_exist(file1, file2):
+    return file1 and file2 and os.path.isfile(file1) and os.path.isfile(file2)
 
 
-# python -m ok.gui.launcher.init_lenv
-if __name__ == '__main__':
-    config_logger(name='launcher')
-    full_version = find_line_in_requirements('requirements.txt', 'ok-script')
-    if not full_version:
-        logger.error('Could not find ok-script version in requirements.txt')
-        sys.exit(1)
-    lenv_path = create_venv('launcher_env')
-    replace_string_in_file('launcher.json', r'ok-script(?:==[\d.]+)?', full_version)
-    try:
-        lenv_python_exe = os.path.join(lenv_path, 'Scripts', 'python.exe')
-        params = [lenv_python_exe, "-m", "pip", "install", "PySide6-Fluent-Widgets>=1.5.5", '--no-deps',
-                  '--no-cache-dir']
-        result = subprocess.run(params, check=True, capture_output=True, text=True)
-        logger.info("install PySide6-Fluent-Widgets success")
-        logger.info(result.stdout)
-
-        params = [lenv_python_exe, "-m", "pip", "install",
-                  full_version,
-                  '--no-cache-dir']
-        result = subprocess.run(params, check=True, capture_output=True, text=True)
-        logger.info("install ok-script success")
-        logger.info(result.stdout)
-        delete_files()
-    except subprocess.CalledProcessError as e:
-        logger.error("An error occurred while creating the virtual environment.")
-        logger.error(e.stderr)
+def files_content_equal(file1, file2):
+    return filecmp.cmp(file1, file2, shallow=False)

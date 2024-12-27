@@ -38,7 +38,7 @@ class DebugTab(Tab):
         layout.setHorizontalSpacing(10)
         self.handler = Handler(exit_event, "DebugTab")
 
-        self.addCard(self.tr("Debug Tool"), tool_widget)
+        self.add_card(self.tr("Debug Tool"), tool_widget)
 
         dump_button = PushButton(self.tr("Dump Threads(HotKey:Ctrl+Alt+D)"))
         dump_button.clicked.connect(lambda: self.handler.post(dump_threads))
@@ -75,7 +75,7 @@ class DebugTab(Tab):
         call_task_container = QVBoxLayout(call_task_widget)
         call_task_layout = QHBoxLayout()
         call_task_container.addLayout(call_task_layout)
-        self.addCard(self.tr("Debug Task Function"), call_task_widget)
+        self.add_card(self.tr("Debug Task Function"), call_task_widget)
         images = self.config.get("target_images")
         self.select_screenshot_button = PushButton(
             self.tr('{num} images selected').format(num=len(images)) if images else self.tr("Select Screenshots"))

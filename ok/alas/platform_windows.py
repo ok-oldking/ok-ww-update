@@ -1,7 +1,7 @@
 import ctypes
 
 from ok.alas.emulator_windows import Emulator, EmulatorInstance
-
+from ok import Logger
 
 class EmulatorUnknown(Exception):
     pass
@@ -29,6 +29,7 @@ def get_emulator_exe(instance: EmulatorInstance):
     elif instance == Emulator.MuMuPlayer12:
         # MuMuPlayer.exe -v 0
         if instance.MuMuPlayer12_id is None:
+            logger = Logger.get_logger(__name__)
             logger.warning(f'Cannot get MuMu instance index from name {instance.name}')
         return f'"{exe}" -v {instance.MuMuPlayer12_id}'
     elif instance == Emulator.NoxPlayerFamily:

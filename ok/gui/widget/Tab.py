@@ -44,13 +44,16 @@ class Tab(ScrollArea):
         if self.loading_dialog is not None:
             self.loading_dialog.close()
 
-    def addCard(self, title, widget, stretch=0, parent=None):
+    def add_card(self, title, widget, stretch=0, parent=None):
         container = Card(title, widget, stretch=stretch)
-        self.addWidget(container, stretch)
+        self.add_widget(container, stretch)
         return container
 
-    def addWidget(self, *args, **kwargs):
+    def add_widget(self, *args, **kwargs):
         self.vBoxLayout.addWidget(*args, **kwargs)
+
+    def removeWidget(self, widget):
+        self.vBoxLayout.removeWidget(widget)
 
     def addLayout(self, layout, stretch=0):
         self.vBoxLayout.addLayout(layout, stretch)

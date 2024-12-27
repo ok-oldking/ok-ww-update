@@ -4,6 +4,7 @@ from PySide6.QtGui import QPainter, QColor, QPen, QFont, QGuiApplication
 from PySide6.QtWidgets import QWidget
 
 from ok import Logger
+from ok.ok import og
 
 logger = Logger.get_logger(__name__)
 

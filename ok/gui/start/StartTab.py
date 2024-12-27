@@ -17,11 +17,11 @@ class StartTab(Tab):
         self.device_list_row = -1
         self.capture_list_row = -1
         self.start_card = StartCard(exit_event)
-        self.addWidget(self.start_card)
+        self.add_widget(self.start_card)
 
         self.device_list = ListWidget()
         # self.device_list.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Minimum)
-        self.device_container = self.addCard(self.tr("Choose Window"), self.device_list)
+        self.device_container = self.add_card(self.tr("Choose Window"), self.device_list)
         self.device_list.itemSelectionChanged.connect(self.device_index_changed)
 
         self.refresh_button = PushButton(FluentIcon.SYNC, self.tr("Refreshing"))
@@ -30,7 +30,7 @@ class StartTab(Tab):
         communicate.adb_devices.connect(self.update_capture)
 
         self.capture_list = SelectCaptureListView(self.capture_index_changed)
-        self.interaction_container = self.addCard(self.tr("Capture Method"), self.capture_list)
+        self.interaction_container = self.add_card(self.tr("Capture Method"), self.capture_list)
 
         self.closed_by_finish_loading = False
         self.message = "Loading"
