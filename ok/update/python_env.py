@@ -221,17 +221,6 @@ def copytree_no_overwrite(src, dst):
                 logger.debug(f'skip copy {s} -> {d}')
 
 
-def kill_exe(relative_path):
-    try:
-        for proc in psutil.process_iter(['pid', 'name', 'exe']):
-            if proc.info['exe'] and os.path.normpath(proc.info['exe']).startswith(
-                    os.path.abspath(relative_path)):
-                logger.info(f'try kill the exe {proc.info}')
-                proc.kill()
-    except Exception as e:
-        logger.error(f'kill process error', e)
-
-
 if __name__ == '__main__':
     print(find_line_in_requirements('requirements.txt', 'ok-script'))
     delete_files(

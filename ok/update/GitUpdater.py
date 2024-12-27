@@ -20,9 +20,8 @@ from ok import Logger
 from ok import delete_if_exists
 from ok.gui.Communicate import communicate
 from ok.gui.util.Alert import alert_error, alert_info
-from ok.ok import og
+from ok import og, kill_exe
 from ok.update.init_launcher_env import create_repo_venv
-from ok.update.python_env import kill_exe
 
 logger = Logger.get_logger(__name__)
 

@@ -5,7 +5,6 @@ from qfluentwidgets import PushButton, ComboBox, FluentIcon, PrimaryPushButton, 
 from ok import Logger
 from ok.gui.Communicate import communicate
 from ok.gui.launcher.DownloadBar import DownloadBar
-from ok.gui.launcher.LinksBar import LinksBar
 from ok.update.GitUpdater import GitUpdater, is_newer_or_eq_version
 
 logger = Logger.get_logger(__name__)
@@ -24,10 +23,6 @@ class UpdateBar(QWidget):
         self.version_log_label = BodyLabel(self.tr("Checking for Updates..."))
         self.version_log_label.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         self.version_log_label.setWordWrap(True)
-
-        if config.get('links'):
-            self.links_bar = LinksBar(config)
-            self.layout.addWidget(self.links_bar)
 
         self.download_bar = DownloadBar()
         self.layout.addWidget(self.download_bar)
