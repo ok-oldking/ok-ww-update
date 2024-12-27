@@ -5,6 +5,8 @@ import shutil
 import stat
 import subprocess
 
+from ok.update.GitUpdater import remove_ok_requirements
+
 
 def run_command(command):
     print(f'Running command: {command}')
@@ -83,20 +85,31 @@ def remove_history_before_tag(tag_name):
 
 
 def main():
+    import sys
+
     if '--repos' not in sys.argv or '--files' not in sys.argv:
         print("Usage: python update_repos.py --repos repo1 repo2 ... --files file1 file2 ...")
         sys.exit(1)
 
+    if '--tag' not in sys.argv:
+        print("Usage: python update_repos.py --repos repo1 repo2 ... --files file1 file2 ... --tag tag_name")
+        sys.exit(1)
+
     repos_index = sys.argv.index('--repos') + 1
     files_index = sys.argv.index('--files') + 1
+    tag_index = sys.argv.index('--tag') + 1
 
     repo_urls = sys.argv[repos_index:files_index - 1]
+    files_filename = sys.argv[files_index:tag_index - 1]
+    tag_name = sys.argv[tag_index]
 
-    files_filename = sys.argv[files_index]
+    print(f"Repositories: {repo_urls}")
+    print(f"Files: {files_filename}")
+    print(f"Tag: {tag_name}")
 
     # Read the list of files from the file
     try:
-        with open(files_filename, 'r') as file:
+        with open(files_filename[0], 'r') as file:
             files_to_copy = [line.strip() for line in file.readlines()]
     except FileNotFoundError:
         print(f"Error: File '{files_filename}' not found.")
@@ -171,6 +184,8 @@ def main():
                 raise e
 
         os.chdir(target_repo_path)
+
+        remove_ok_requirements(os.getcwd(), tag_name)
 
         # Add the copied files and folders to the git index
         try:

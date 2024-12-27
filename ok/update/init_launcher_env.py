@@ -43,7 +43,7 @@ def create_repo_venv(python_dir, code_dir='.', last_env_folder=None, index_url="
             logger.info(f'pip-sync.exe not found, install using pip')
             params_install = [python_executable, '-m', 'pip', "install", "pip-tools", "-i", index_url, '--no-cache']
             print(f"Running command: {' '.join(params_install)}")
-            result_install = subprocess.run(params_install, check=True, cwd=code_dir, capture_output=True,
+            result_install = subprocess.run(params_install, check=True, capture_output=True,
                                             encoding='utf-8',
                                             text=True)
 
@@ -66,7 +66,7 @@ def create_repo_venv(python_dir, code_dir='.', last_env_folder=None, index_url="
                            python_executable, "-i", index_url, '--pip-args',
                            '"--no-cache"']
             logger.info(f"\nRunning command: {' '.join(params_sync)}")
-            result_sync = subprocess.run(params_sync, check=True, cwd=code_dir, capture_output=True, encoding='utf-8',
+            result_sync = subprocess.run(params_sync, check=True, capture_output=True, encoding='utf-8',
                                          text=True)
 
             logger.info("\n--- pip-sync Output ---")
@@ -83,7 +83,6 @@ def create_repo_venv(python_dir, code_dir='.', last_env_folder=None, index_url="
         else:
             logger.info(
                 f"requirements equal skip pip-sync '{requirements}' and '{old_requirements}' exist and their contents are equal.")
-
         return True
     except Exception as e:
         logger.error("An error occurred while creating the virtual environment.", e)
