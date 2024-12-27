@@ -90,10 +90,17 @@ class GitUpdater:
             venv_path = os.path.join(repo_path, '.venv')
             if not (os.path.exists(venv_path)):
                 logger.info(f".venv not exist Creating new venv at {venv_path}")
-                if not create_repo_venv(os.path.join(os.getcwd(), 'python'), repo_path, venv_path,
+                app_env = os.path.join(os.getcwd(), 'python', 'app_env')
+                if not os.path.exists(app_env):
+                    app_env = None
+                if not create_repo_venv(os.path.join(os.getcwd(), 'python'), repo_path, app_env,
                                         self.get_current_source()[
                                             'pip_url']):
                     logger.error(f'failed to create venv {venv_path}')
+            if 'app_env' not in sys.executable:
+                logger.info(f'delete legacy env')
+                delete_if_exists(os.path.join(os.getcwd(), 'python', 'app_env'))
+                delete_if_exists(os.path.join(os.getcwd(), 'python', 'launcher_env'))
 
 
         self.list_all_versions()
