@@ -490,7 +490,7 @@ def check_repo(path, new_url):
                 if current_url != new_url:
                     logger.info(f"Updating remote URL from {current_url} to {new_url}")
                     origin.set_url(new_url)
-                logger.info(f'check_repo {path} {repo.head.commit}')
+                logger.info(f'check_repo {path}')
                 return repo
     except Exception as e:
         logger.error(f'invalid repo path {path}', e)
