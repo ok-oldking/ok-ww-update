@@ -77,6 +77,7 @@ def create_repo_venv(python_dir, code_dir='.', last_env_folder=None, index_url="
             logger.info(result_sync.stderr)
             logger.info("sync requirements success")
             if not last_env_folder:
+                delete_files(root_dir=python_dir)
                 delete_files(root_dir=lenv_path)
             logger.info(
                 f"requirements not equal use pip-sync '{requirements}' and '{old_requirements}'")

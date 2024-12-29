@@ -20,7 +20,8 @@ def delete_files(
                             'py_tensorflow_frontend.cp311-win_amd64.pyd', 'py_pytorch_frontend.cp311-win_amd64.pyd',
                             '__pycache__',
                             '*.exe'],
-        whitelist_patterns=['adb.exe', 'git.ext', 't64.exe', 'w64.exe', 'cli-64.exe', 'cli.exe', 'python*.exe',
+        whitelist_patterns=['adb.exe', 'git.exe', 'git*exe', 't64.exe', 'w64.exe', 'cli-64.exe', 'cli.exe',
+                            'python*.exe',
                             '*pip*'],
         root_dir='python'):
     """
