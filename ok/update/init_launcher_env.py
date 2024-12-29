@@ -61,7 +61,8 @@ def create_repo_venv(python_dir, code_dir='.', last_env_folder=None, index_url="
         else:
             old_requirements = None
 
-        if not last_env_folder or not files_exist(requirements, old_requirements) or not files_content_equal(requirements, old_requirements):
+        if not last_env_folder or not files_exist(requirements, old_requirements) or not files_content_equal(
+                requirements, old_requirements):
             params_sync = [python_executable, '-m', 'piptools', 'sync', requirements, '--python-executable',
                            python_executable, "-i", index_url, '--pip-args',
                            '"--no-cache"']
@@ -76,7 +77,6 @@ def create_repo_venv(python_dir, code_dir='.', last_env_folder=None, index_url="
             logger.info(result_sync.stderr)
             logger.info("sync requirements success")
             if not last_env_folder:
-                delete_files(root_dir=python_dir)
                 delete_files(root_dir=lenv_path)
             logger.info(
                 f"requirements not equal use pip-sync '{requirements}' and '{old_requirements}'")

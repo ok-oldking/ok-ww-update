@@ -3,8 +3,6 @@ import shutil
 import subprocess
 import sys
 
-import psutil
-
 from ok import Logger
 
 logger = Logger.get_logger(__name__)
@@ -22,7 +20,8 @@ def delete_files(
                             'py_tensorflow_frontend.cp311-win_amd64.pyd', 'py_pytorch_frontend.cp311-win_amd64.pyd',
                             '__pycache__',
                             '*.exe'],
-        whitelist_patterns=['adb.exe', 't64.exe', 'w64.exe', 'cli-64.exe', 'cli.exe', 'python*.exe', '*pip*'],
+        whitelist_patterns=['adb.exe', 'git.ext', 't64.exe', 'w64.exe', 'cli-64.exe', 'cli.exe', 'python*.exe',
+                            '*pip*'],
         root_dir='python'):
     """
     Delete files matching the given patterns in all directories starting from root_dir,
@@ -219,9 +218,3 @@ def copytree_no_overwrite(src, dst):
                 logger.debug(f'copying {s} -> {d}')
             else:
                 logger.debug(f'skip copy {s} -> {d}')
-
-
-if __name__ == '__main__':
-    print(find_line_in_requirements('requirements.txt', 'ok-script'))
-    delete_files(
-        os.path.join('python', 'app_env'))
