@@ -292,25 +292,6 @@ class GitUpdater:
 
         if launch_profiles:
             logger.info(f'read launcher config success, {launch_profiles}')
-            validated = []
-            my_cuda = 'No'
-            for profile in launch_profiles:
-                if requires_cuda := profile.get('requires_cuda'):
-                    if my_cuda == 'No':
-                        my_cuda = get_cuda_version()
-                    if not my_cuda or is_newer_or_eq_version(my_cuda, requires_cuda) < 0:
-                        continue
-                validated.append(profile)
-            if self.launch_profiles and self.launch_profiles != validated:
-                logger.info(f'launcher_config changed, set app_dependencies_installed = False')
-                self.launcher_config['app_dependencies_installed'] = False
-            else:
-                logger.info(f'no need to update dependencies')
-            self.launch_profiles = validated
-            if self.launcher_config.get('profile_index', 0) >= len(self.launch_profiles):
-                self.launcher_config['profile_index'] = 0
-            self.cuda_version = my_cuda or "No"
-            communicate.cuda_version.emit(self.cuda_version)
             communicate.launcher_profiles.emit(self.launch_profiles)
         else:
             logger.error(f'read launcher config failed')
@@ -713,19 +694,3 @@ def add_to_path(folder_path):
     else:
         logger.info(f"{folder_path} is already in the PATH for the current script.")
 
-
-def get_cuda_version():
-    try:
-        # Run the nvidia-smi command
-        output = subprocess.check_output(['nvidia-smi'], stderr=subprocess.STDOUT, universal_newlines=True)
-
-        # Use regular expression to find the CUDA version
-        match = re.search(r'CUDA Version: (\d+\.\d+)', output)
-        if match:
-            logger.info(f'CUDA Version is found {match.group(1)}')
-            return match.group(1)
-        else:
-            return None
-    except Exception as e:
-        logger.error(f"get_cuda_version Error occurred:", e)
-        return None
