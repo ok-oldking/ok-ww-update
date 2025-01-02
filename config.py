@@ -1,7 +1,7 @@
 import os
 from pathlib import Path
 
-version = "v2.0.0"
+version = "v2.0.1"
 
 
 def calculate_pc_exe_path(running_path):
@@ -111,7 +111,6 @@ config = {
     'onetime_tasks': [  # tasks to execute
         ["src.task.FarmEchoTask", "FarmEchoTask"],
         ["src.task.FarmWorldBossTask", "FarmWorldBossTask"],
-        ["src.task.DiscardEchoTask", "DiscardEchoTask"],
         ["src.task.DiagnosisTask", "DiagnosisTask"],
     ], 'trigger_tasks': [
         ["src.task.AutoCombatTask", "AutoCombatTask"],
