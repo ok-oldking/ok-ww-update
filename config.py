@@ -1,7 +1,7 @@
 import os
 from pathlib import Path
 
-version = "v1.4.81"
+version = "v2.0.0"
 
 
 def calculate_pc_exe_path(running_path):
