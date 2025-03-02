@@ -1,7 +1,7 @@
 import os
 from pathlib import Path
 
-version = "v2.1.9"
+version = "v2.1.10"
 
 
 def calculate_pc_exe_path(running_path):
@@ -48,9 +48,6 @@ config = {
     'supported_resolution': {
         'ratio': '16:9',
         'min_size': (1280, 720)
-    },
-    'analytics': {
-        'report_url': 'http://111.231.71.225/report'
     },
     'git_update': {'sources': [{
         'name': 'Global',
@@ -109,6 +106,8 @@ config = {
     'launcher_error_log_file': 'logs/launcher_error.log',
     'version': version,
     'onetime_tasks': [  # tasks to execute
+        ["src.task.DailyTask", "DailyTask"],
+        ["src.task.TacetTask", "TacetTask"],
         ["src.task.FarmEchoTask", "FarmEchoTask"],
         ["src.task.FarmWorldBossTask", "FarmWorldBossTask"],
         ["src.task.DiagnosisTask", "DiagnosisTask"],
