@@ -163,6 +163,8 @@ class Screenshot(QObject):
     def to_pil_image(self, frame):
         if frame is None:
             return None
+        if processor := og.config.get('screenshot_processor'):
+            frame = processor(frame.copy())
         return Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
 
 

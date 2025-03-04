@@ -241,12 +241,14 @@ class DebugTab(Tab):
             self.config['target_images'] = None
 
 
-def capture():
+def capture(processor=None):
     if og.device_manager.capture_method is not None:
         logger.info(f'og.device_manager.capture_method {og.device_manager.capture_method}')
         current_capture = str(og.device_manager.capture_method) + '_' + str(time.time() * 1000)
         try:
             frame = og.device_manager.capture_method.do_get_frame()
+            if processor:
+                frame = processor(frame.copy())
             if frame is not None:
                 file_path = og.ok.screenshot.generate_screen_shot(frame, og.ok.screenshot.ui_dict,
                                                                   og.ok.screenshot.screenshot_folder,

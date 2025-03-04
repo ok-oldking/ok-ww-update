@@ -101,7 +101,7 @@ class StartController(QObject):
                             alert_error(self.tr('Windows night light is enabled, tasks might not work correctly!'),
                                         True)
                 if not og.device_manager.capture_method.hwnd_window.pos_valid:
-                    return self.tr(f'Game window is minimized or out of screen, please restore it first!')
+                    return self.tr(f'Window is minimized or out of screen, and don\'t use full-screen exclusive mode!')
             frame = self.try_capture_a_frame()
             if frame is None:
                 return self.tr('Capture failed, please check game window')

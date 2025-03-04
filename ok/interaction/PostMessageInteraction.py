@@ -109,6 +109,9 @@ class PostMessageInteraction(BaseInteraction):
     def activate(self):
         self.post(win32con.WM_ACTIVATE, win32con.WA_ACTIVE, 0)
 
+    def deactivate(self):
+        self.post(win32con.WA_INACTIVE, win32con.WA_ACTIVE, 0)
+
     def try_activate(self):
         # if time.time() - self.last_activate > self.activate_interval:
         #     self.last_activate = time.time()

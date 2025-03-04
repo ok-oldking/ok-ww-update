@@ -28,7 +28,7 @@ class StartCard(SettingCard):
 
         self.capture_button = PushButton(FluentIcon.ZOOM, self.tr("Test Capture"), self)
         self.hBoxLayout.addWidget(self.capture_button, 0, Qt.AlignRight)
-        self.capture_button.clicked.connect(capture)
+        self.capture_button.clicked.connect(self.capture)
 
         self.hBoxLayout.addSpacing(16)
 
@@ -44,6 +44,10 @@ class StartCard(SettingCard):
         self.handler = Handler(exit_event, "StartCard")
         self.handler.post(self.bind_hot_keys)
         self.handler.post(self.check_hotkey, 0.1)
+
+    @staticmethod
+    def capture():
+        return capture(processor=og.config.get('screenshot_processor'))
 
     def status_clicked(self):
         if not og.executor.paused:
