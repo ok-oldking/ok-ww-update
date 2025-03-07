@@ -3,7 +3,7 @@ from pathlib import Path
 
 import numpy as np
 
-version = "v2.1.14"
+version = "v2.1.15"
 
 
 def calculate_pc_exe_path(running_path):
