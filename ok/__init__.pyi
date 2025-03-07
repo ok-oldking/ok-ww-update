@@ -1,12 +1,14 @@
-import _ctypes
-import _cython_3_0_11
 import dataclasses
 import enum
 import logging
 import threading
 from _typeshed import Incomplete
-from ok.gui.Communicate import communicate as communicate
 from typing import Callable, ClassVar
+
+import _ctypes
+import _cython_3_0_11
+
+from ok.gui.Communicate import communicate as communicate
 
 DWMWA_EXTENDED_FRAME_BOUNDS: int
 MAXBYTE: int
@@ -293,6 +295,8 @@ class BaseTask(FindFeature):
 
     def set_executor(self, *args, **kwargs): ...
 
+    def find_boxes(self, boxes, match=None, boundary=None): ...
+
     def should_trigger(self, *args, **kwargs): ...
 
     def trigger(self, *args, **kwargs): ...
@@ -350,6 +354,7 @@ class BitBltCaptureMethod(BaseWindowsCaptureMethod):
 
     def __setstate_cython__(self, *args, **kwargs): ...
 
+
 class Box:
     __pyx_vtable__: ClassVar[PyCapsule] = ...
     confidence: Incomplete
@@ -376,6 +381,7 @@ class Box:
     def relative_with_variance(self, *args, **kwargs): ...
 
     def scale(self, *args, **kwargs): ...
+
     def __eq__(self, other: object) -> bool: ...
 
     def __ge__(self, other: object) -> bool: ...
@@ -553,6 +559,10 @@ class DeviceManager:
     def width(self): ...
 
 
+class DoNothingInteraction:
+    pass
+
+
 class ExecutorOperation:
     debug: Incomplete
     executor: Incomplete
@@ -578,6 +588,8 @@ class ExecutorOperation:
     def calculate_color_percentage(self, *args, **kwargs): ...
 
     def check_interval(self, *args, **kwargs): ...
+
+    def is_adb(self): ...
 
     def click(self, *args, **kwargs): ...
 
@@ -855,10 +867,12 @@ class InfoDict(dict):
 
     def __setitem__(self, index, object) -> None: ...
 
+
 class Logger:
     __pyx_vtable__: ClassVar[PyCapsule] = ...
 
     def __init__(self, *args, **kwargs) -> None: ...
+
     @staticmethod
     def call_stack(*args, **kwargs): ...
 
@@ -993,6 +1007,7 @@ class SYSTEM_PROCESS_ID_INFORMATION(_ctypes.Structure):
     _fields_: ClassVar[list] = ...
     ImageName: Incomplete
     ProcessId: Incomplete
+
 
 class ScheduledTask:
     __init__: ClassVar[Callable] = ...

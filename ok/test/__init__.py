@@ -1,5 +1,5 @@
 from ok import ImageCaptureMethod
-from ok.interaction.DoNothingInteraction import DoNothingInteraction
+from ok import DoNothingInteraction
 
 ok = None
 

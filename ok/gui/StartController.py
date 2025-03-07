@@ -2,7 +2,7 @@ import time
 
 from PySide6.QtCore import QObject
 
-from ok import BaseWindowsCaptureMethod, og
+from ok import BaseWindowsCaptureMethod, og, is_auto_hdr_enabled
 from ok import Handler
 from ok import Logger
 from ok import execute
@@ -84,13 +84,21 @@ class StartController(QObject):
                 return self.tr("Game window is not connected, please select the game window and capture method.")
             if isinstance(og.device_manager.capture_method, BaseWindowsCaptureMethod):
                 if self.config.get('windows', {}).get('check_hdr', False):
-                    logger.info(f'start checking for hdr and night light')
-                    from ok.display.display import is_hdr_enabled
-                    if is_hdr_enabled():
-                        if self.config.get('windows', {}).get('force_no_hdr', False):
-                            return self.tr(f'Windows HDR is enabled, please turn it off first.')
-                        else:
-                            alert_error(self.tr('Windows HDR is enabled, tasks might not work correctly!'), True)
+                    path = og.device_manager.get_exe_path(device)
+                    if path:
+                        enabled = is_auto_hdr_enabled(path)
+                        logger.info(f'hdr_enabled {path} {enabled}')
+                        if enabled:
+                            if self.config.get('windows', {}).get('force_no_hdr', False):
+                                return self.tr(f'Auto HDR is enabled, please turn it off first.')
+                            else:
+                                alert_error(self.tr('Auto HDR is enabled, tasks might not work correctly!'), True)
+                    # from ok.display.display import is_hdr_enabled
+                    # if is_hdr_enabled():
+                    #     if self.config.get('windows', {}).get('force_no_hdr', False):
+                    #         return self.tr(f'Windows HDR is enabled, please turn it off first.')
+                    #     else:
+                    #         alert_error(self.tr('Windows HDR is enabled, tasks might not work correctly!'), True)
                 if self.config.get('windows', {}).get('check_night_light', False):
                     logger.info(f'start checking for night light')
                     from ok.display.display import is_night_light_enabled

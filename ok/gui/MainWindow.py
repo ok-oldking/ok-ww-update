@@ -137,6 +137,12 @@ class MainWindow(MSFluentWindow):
             logger.info('No button is pressed')
             self.app.quit()
 
+    def show_ok(self):
+        title = self.tr('Update')
+        content = QCoreApplication.translate('app', 'The current version {} must be updated').format(
+            og.app.updater.starting_version)
+        w = MessageBox(title, content, self.window())
+
     def showEvent(self, event):
         if event.type() == QEvent.Show:
             logger.info("Window has fully displayed")
