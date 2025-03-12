@@ -2,7 +2,7 @@ import time
 
 from PySide6.QtCore import QObject
 
-from ok import BaseWindowsCaptureMethod, og, is_auto_hdr_enabled
+from ok import BaseWindowsCaptureMethod, og, read_game_gpu_pref, read_global_gpu_pref
 from ok import Handler
 from ok import Logger
 from ok import execute
@@ -86,9 +86,9 @@ class StartController(QObject):
                 if self.config.get('windows', {}).get('check_hdr', False):
                     path = og.device_manager.get_exe_path(device)
                     if path:
-                        enabled = is_auto_hdr_enabled(path)
-                        logger.info(f'hdr_enabled {path} {enabled}')
-                        if enabled:
+                        hdr_enabled, swap_enabled = read_game_gpu_pref(path)
+                        logger.info(f'hdr_enabled {path} {hdr_enabled}')
+                        if hdr_enabled == True or (hdr_enabled == None and read_global_gpu_pref()[0]):
                             if self.config.get('windows', {}).get('force_no_hdr', False):
                                 return self.tr(f'Auto HDR is enabled, please turn it off first.')
                             else:

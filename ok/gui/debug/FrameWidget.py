@@ -1,6 +1,6 @@
 import win32api
-from PySide6.QtCore import Qt, QPoint, QTimer
-from PySide6.QtGui import QPainter, QColor, QPen, QFont, QGuiApplication
+from PySide6.QtCore import Qt, QPoint, QTimer, QRectF
+from PySide6.QtGui import QPainter, QColor, QPen, QFont, QGuiApplication, QBrush
 from PySide6.QtWidgets import QWidget
 
 from ok import Logger
@@ -47,6 +47,8 @@ class FrameWidget(QWidget):
         self.paint_border(painter)
         self.paint_boxes(painter)
         self.paint_mouse_position(painter)
+        if og.config.get('debug_cover_uid'):
+            self.paint_uid_cover(painter)
 
     def paint_boxes(self, painter):
         pen = QPen()  # Set the brush to red color
@@ -66,6 +68,27 @@ class FrameWidget(QWidget):
                 y = box.y * frame_ratio
                 painter.drawRect(x, y, width, height)
                 painter.drawText(x, y + height + 12, f"{box.name or key}_{round(box.confidence * 100)}")
+
+    def paint_uid_cover(self, painter):
+        """
+        Paints a black solid rectangle on the bottom right corner of the screen.
+
+        Args:
+            painter: The QPainter object used for drawing.
+        """
+        window_width = painter.window().width()  # Use painter's window dimensions
+        window_height = painter.window().height()
+
+        rect_width = window_width * 0.13
+        rect_height = window_height * 0.025
+        rect_x = window_width - rect_width
+        rect_y = window_height - rect_height
+
+        # Set the brush to black
+        painter.setBrush(QBrush(Qt.black, Qt.SolidPattern))
+        painter.setPen(Qt.NoPen)  # Remove rectangle outline
+
+        painter.drawRect(QRectF(rect_x, rect_y, rect_width, rect_height))
 
     def paint_border(self, painter):
         pen = QPen(QColor(255, 0, 0, 255))  # Solid red color for the border

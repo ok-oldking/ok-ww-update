@@ -3,7 +3,7 @@ from pathlib import Path
 
 import numpy as np
 
-version = "v2.1.15"
+version = "v2.1.16"
 
 
 def calculate_pc_exe_path(running_path):
@@ -55,7 +55,9 @@ config = {
         'lib': 'rapidocr_openvino'
     },
     'start_timeout': 120,  # default 60
-    'wait_until_before_delay': 2,  # default 1 , for wait_until() function
+    'wait_until_before_delay': 0,  # default 1 , for wait_until() function
+    'wait_until_check_delay': 0,
+    'wait_until_settle_time': 0,
     # required if using feature detection
     'template_matching': {
         'coco_feature_json': os.path.join('assets', 'result.json'),
