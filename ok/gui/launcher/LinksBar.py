@@ -15,7 +15,7 @@ class LinksBar(QWidget):
 
     def __init__(self, app_config):
         super().__init__()
-        self.link_config = app_config.get('links')
+        self.link_config = app_config.get('links') or {}
 
         self.layout = QHBoxLayout()
 
@@ -23,11 +23,13 @@ class LinksBar(QWidget):
 
         self.version_label = BodyLabel()
         self.layout.addWidget(self.version_label)
+        github_url = self.get_url('github')
+        if not github_url or 'oldking' not in github_url:
+            github_url = 'https://github.com/ok-oldking/ok-wuthering-waves'
 
-        if self.get_url('github'):
-            self.github_button = PushButton(self.tr("GitHub"), icon=FluentIcon.GITHUB)
-            self.github_button.clicked.connect(lambda: self.open_url('github'))
-            self.layout.addWidget(self.github_button, alignment=Qt.AlignRight, stretch=0)
+        self.github_button = PushButton(self.tr("GitHub"), icon=FluentIcon.GITHUB)
+        self.github_button.clicked.connect(lambda: QDesktopServices.openUrl(QUrl(github_url)))
+        self.layout.addWidget(self.github_button, alignment=Qt.AlignRight, stretch=0)
 
         if self.get_url('discord'):
             self.discord_button = PushButton(self.tr("Discord"), icon=OKIcon.DISCORD)
