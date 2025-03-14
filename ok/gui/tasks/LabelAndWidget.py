@@ -1,4 +1,4 @@
-from PySide6.QtWidgets import QWidget, QSpacerItem, QSizePolicy, QHBoxLayout, QVBoxLayout, QLayout
+from PySide6.QtWidgets import QWidget, QSpacerItem, QSizePolicy, QHBoxLayout, QVBoxLayout, QLayout, QLabel
 from qfluentwidgets import BodyLabel, FluentStyleSheet
 
 from ok.gui.common.style_sheet import StyleSheet
@@ -12,15 +12,15 @@ class LabelAndWidget(QWidget):
         self.layout = QHBoxLayout(self)
         self.title_layout = QVBoxLayout()
         self.layout.addLayout(self.title_layout, stretch=1)
-        self.title = BodyLabel(og.app.tr(title))
-        self.title.setWordWrap(True)
+        self.title = QLabel(og.app.tr(title))
+        # self.title.setWordWrap(True)
         self.title.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Minimum)
         self.title_layout.addWidget(self.title)
         self.title.setObjectName('titleLabel')
         if content:
-            self.contentLabel = BodyLabel(og.app.tr(content))
+            self.contentLabel = QLabel(og.app.tr(content))
             self.contentLabel.setObjectName('contentLabel')
-            self.contentLabel.setWordWrap(True)
+            # self.contentLabel.setWordWrap(True)
             self.title_layout.addWidget(self.contentLabel)
         self.layout.addStretch()
 
