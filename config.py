@@ -3,7 +3,9 @@ from pathlib import Path
 
 import numpy as np
 
-version = "v2.1.17"
+from ok import ConfigOption
+
+version = "v2.1.18"
 
 
 def calculate_pc_exe_path(running_path):
@@ -45,12 +47,20 @@ def make_bottom_right_black(frame):
         return frame
 
 
+key_config_option = ConfigOption('Game Hotkey Config', {
+    'HotKey Verify': False,
+    'Echo Key': 'q',
+    'Liberation Key': 'r',
+    'Resonance Key': 'e',
+}, description='In Game Hotkey for Skills')
+
 config = {
     'debug': False,  # Optional, default: False
     'use_gui': True,
     'config_folder': 'configs',
     'screenshot_processor': make_bottom_right_black,
     'gui_icon': 'icon.png',
+    'global_configs': [key_config_option],
     'ocr': {
         'lib': 'rapidocr_openvino'
     },

@@ -6,7 +6,7 @@ from ok.gui.tasks.ConfigItemFactory import config_widget
 
 
 class ConfigCard(ExpandSettingCard):
-    def __init__(self, name, config, description, default_config, config_description,
+    def __init__(self, task, name, config, description, default_config, config_description,
                  config_type, config_icon):
 
         super().__init__(config_icon or FluentIcon.INFO, og.app.tr(name), og.app.tr(description))
@@ -15,6 +15,7 @@ class ConfigCard(ExpandSettingCard):
         self.default_config = default_config
         self.config_description = config_description
         self.config_type = config_type
+        self.task = task
         if default_config:
             self.reset_config = PushButton(FluentIcon.CANCEL, self.tr("Reset Config"), self)
             self.addWidget(self.reset_config)
@@ -38,7 +39,7 @@ class ConfigCard(ExpandSettingCard):
                     self.__addConfig(key, value)
 
     def __addConfig(self, key: str, value):
-        widget = config_widget(self.config_type, self.config_description, self.config, key, value)
+        widget = config_widget(self.config_type, self.config_description, self.config, key, value, self.task)
         self.config_widgets.append(widget)
         self.viewLayout.addWidget(widget)
         self._adjustViewSize()

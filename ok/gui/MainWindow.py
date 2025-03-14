@@ -79,8 +79,8 @@ class MainWindow(MSFluentWindow):
             self.addSubInterface(self.act_tab, FluentIcon.CERTIFICATE, self.tr('激活'),
                                  position=NavigationItemPosition.BOTTOM)
 
-        setting_tab = SettingTab()
-        self.addSubInterface(setting_tab, FluentIcon.SETTING, self.tr('Settings'),
+        self.setting_tab = SettingTab()
+        self.addSubInterface(self.setting_tab, FluentIcon.SETTING, self.tr('Settings'),
                              position=NavigationItemPosition.BOTTOM)
 
         # Styling the tabs and content if needed, for example:
@@ -112,12 +112,17 @@ class MainWindow(MSFluentWindow):
         communicate.notification.connect(self.show_notification)
         communicate.config_validation.connect(self.config_validation)
         communicate.starting_emulator.connect(self.starting_emulator)
+        communicate.global_config.connect(self.goto_global_config)
         if self.about_tab is not None and version != self.main_window_config.get('last_version'):
             logger.info(f'first run show about tab last version:{self.main_window_config.get("last_version")}')
             self.main_window_config['last_version'] = version
             self.switchTo(self.about_tab)
         og.handler.post(self.do_check_auth, delay=20 * 60)
         logger.info('main window __init__ done')
+
+    def goto_global_config(self, key):
+        self.switchTo(self.setting_tab)
+        self.setting_tab.goto_config(key)
 
     def tray_quit(self):
         logger.info('main window tray_quit')

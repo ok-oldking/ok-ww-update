@@ -1,5 +1,6 @@
 from ok.gui.tasks.LabelAndDoubleSpinBox import LabelAndDoubleSpinBox
 from ok.gui.tasks.LabelAndDropDown import LabelAndDropDown
+from ok.gui.tasks.LabelAndGlobal import LabelAndGlobal
 from ok.gui.tasks.LabelAndLineEdit import LabelAndLineEdit
 from ok.gui.tasks.LabelAndMultiSelection import LabelAndMultiSelection
 from ok.gui.tasks.LabelAndSpinBox import LabelAndSpinBox
@@ -8,13 +9,17 @@ from ok.gui.tasks.LabelAndTextEdit import LabelAndTextEdit
 from ok.gui.tasks.ModifyListItem import ModifyListItem
 
 
-def config_widget(config_type, config_desc, config, key, value):
+def config_widget(config_type, config_desc, config, key, value, task):
     the_type = config_type.get(key) if config_type is not None else None
     if the_type:
         if the_type['type'] == 'drop_down':
             return LabelAndDropDown(config_desc, the_type['options'], config, key)
         elif the_type['type'] == 'multi_selection':
             return LabelAndMultiSelection(config_desc, the_type['options'], config, key)
+        elif the_type['type'] == 'global':
+            config = task.get_global_config(key)
+            desc = task.get_global_config_desc(key)
+            return LabelAndGlobal(desc, config, key)
         else:
             raise Exception('Unknown config type')
     if isinstance(value, bool):

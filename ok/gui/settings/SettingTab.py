@@ -18,18 +18,6 @@ class SettingTab(Tab):
             self.tr('Personalization'))
         self.vBoxLayout.addWidget(self.personalGroup)
 
-        # self.themeCard = OptionsSettingCard(
-        #     cfg.themeMode,
-        #     FIF.BRUSH,
-        #     self.tr('Application theme'),
-        #     self.tr("Change the appearance of your application"),
-        #     texts=[
-        #         self.tr('Light'), self.tr('Dark'),
-        #         self.tr('Use system setting')
-        #     ],
-        #     parent=self.personalGroup
-        # )
-
         self.languageCard = ComboBoxSettingCard(
             cfg.language,
             FIF.LANGUAGE,
@@ -38,23 +26,11 @@ class SettingTab(Tab):
             texts=['简体中文', 'English', self.tr('Use system setting')],
             parent=self.personalGroup
         )
-
+        self.config_groups = []
         self.app_group = None
         self.__initWidget()
 
     def __initWidget(self):
-        # self.resize(1000, 800)
-        # self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-        # # self.setViewportMargins(0, 80, 0, 20)
-        # self.vBoxLayout.addWidget(self.scrollWidget)
-        # # self.setWidget(self.scrollWidget)
-        # self.setWidgetResizable(True)
-        # self.setObjectName('settingInterface')
-
-        # initialize style sheet
-        # self.scrollWidget.setObjectName('scrollWidget')
-
-        # initialize layout
         self.__initLayout()
         self.add_global_config()
         self.__connectSignalToSlot()
@@ -62,6 +38,17 @@ class SettingTab(Tab):
     def __initLayout(self):
         # self.personalGroup.addSettingCard(self.themeCard)
         self.personalGroup.addSettingCard(self.languageCard)
+
+    def goto_config(self, key):
+        to_scroll = None
+        for config in self.config_groups:
+            if config.has_key(key):
+                config.setExpand(True)
+                to_scroll = config
+            else:
+                config.setExpand(False)
+        # if to_scroll:
+        #     self.scroll()
 
     def add_global_config(self):
         global_configs = og.executor.global_config.get_all_visible_configs()
@@ -71,6 +58,7 @@ class SettingTab(Tab):
             for name, config, option in global_configs:
                 card = GlobalConfigCard(config, option)
                 self.app_group.addSettingCard(card)
+                self.config_groups.append(card)
             self.vBoxLayout.addWidget(self.app_group)
 
     def __showRestartTooltip(self):

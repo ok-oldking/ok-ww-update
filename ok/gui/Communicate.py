@@ -32,6 +32,7 @@ class Communicate(QObject):
     cuda_version = Signal(str)
     start_success = Signal()
     act = Signal()
+    global_config = Signal(str)
 
     def emit_draw_box(self, key: str = None, boxes=None, color=None, frame=None):
         self.draw_box.emit(key, boxes, color, frame)

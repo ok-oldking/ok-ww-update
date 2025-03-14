@@ -11,7 +11,7 @@ logger = Logger.get_logger(__name__)
 
 class TaskCard(ConfigCard):
     def __init__(self, task: BaseTask, onetime):
-        super().__init__(task.name, task.config, task.description, task.default_config, task.config_description,
+        super().__init__(task, task.name, task.config, task.description, task.default_config, task.config_description,
                          task.config_type, config_icon=task.icon or FluentIcon.INFO)
         self.task = task
         self.onetime = onetime
