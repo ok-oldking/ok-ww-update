@@ -5,7 +5,7 @@ import numpy as np
 
 from ok import ConfigOption
 
-version = "v2.1.19"
+version = "v2.1.20"
 
 
 def calculate_pc_exe_path(running_path):
@@ -72,6 +72,7 @@ config = {
         'default_horizontal_variance': 0.002,
         'default_vertical_variance': 0.002,
         'default_threshold': 0.8,
+        'target_height': 540,
     },
     'windows': {  # required  when supporting windows game
         'exe': 'Client-Win64-Shipping.exe',
