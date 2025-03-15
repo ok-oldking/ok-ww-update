@@ -1,11 +1,7 @@
 from qfluentwidgets import BodyLabel
 
-from ok import Logger
-from ok import og
 from ok.gui.about.VersionCard import VersionCard
 from ok.gui.widget.Tab import Tab
-
-logger = Logger.get_logger(__name__)
 
 
 class ActTab(Tab):
@@ -15,6 +11,7 @@ class ActTab(Tab):
                                         config.get('debug'), self)
         # Create a QTextEdit instance
         self.add_widget(self.version_card)
+        from ok import og
         if og.trial_expire:
             expire_time_label = BodyLabel("试用到期:{}".format(og.get_trial_expire_util_str()))
         else:

@@ -3,13 +3,8 @@ from PySide6.QtGui import QDesktopServices, QClipboard
 from PySide6.QtWidgets import QWidget, QHBoxLayout, QSpacerItem, QSizePolicy
 from qfluentwidgets import FluentIcon, PushButton, BodyLabel
 
-from ok import Logger
 from ok.gui.common.OKIcon import OKIcon
 from ok.gui.util.Alert import alert_info
-from ok.gui.util.app import get_localized_app_config
-
-logger = Logger.get_logger(__name__)
-
 
 class LinksBar(QWidget):
 
@@ -75,4 +70,5 @@ class LinksBar(QWidget):
 
     def get_url(self, url_name):
         if self.link_config:
+            from ok.gui.util.app import get_localized_app_config
             return get_localized_app_config(self.link_config, url_name)

@@ -6,7 +6,7 @@ from PySide6.QtWidgets import QAbstractItemView
 from PySide6.QtWidgets import QVBoxLayout
 from qfluentwidgets import ListWidget, PushButton, FluentIcon, SplitTitleBar
 
-from ok import Logger, og
+
 from ok.gui.Communicate import communicate
 from ok.gui.start.SelectCaptureListView import SelectCaptureListView
 from ok.gui.start.StartCard import StartCard
@@ -14,12 +14,13 @@ from ok.gui.util.Alert import alert_info
 from ok.gui.widget.BaseWindow import BaseWindow
 from ok.gui.widget.Tab import Tab
 
-logger = Logger.get_logger(__name__)
 
 
 class StartTab(Tab):
     def __init__(self, config, exit_event):
         super().__init__()
+        from ok import Logger
+        self.logger = Logger.get_logger(__name__)
         self.select_hwnd_window = None
         self.device_list_row = -1
         self.capture_list_row = -1
@@ -57,7 +58,7 @@ class StartTab(Tab):
     def update_window_list(self):
         if self.device_list_row == -1:
             return
-        logger.debug(f"update_window_list {self.device_list_row}")
+        self.logger.debug(f"update_window_list {self.device_list_row}")
         self.capture_list.update_for_device()
 
     def choose_window_clicked(self):
@@ -65,6 +66,7 @@ class StartTab(Tab):
         window.show()
 
     def refresh_clicked(self):
+        from ok import og
         og.device_manager.refresh()
         self.refresh_button.setDisabled(True)
         self.refresh_button.setText(self.tr("Refreshing"))
@@ -72,8 +74,9 @@ class StartTab(Tab):
     def capture_index_changed(self):  # i is an index
         i = self.capture_list.currentRow()
         self.capture_list_row = i
+        from ok import og
         device = og.device_manager.get_preferred_device()
-        logger.debug(f"capture_index_changed {i} {device}")
+        self.logger.debug(f"capture_index_changed {i} {device}")
         if device is not None:
             if device.get('device') == 'adb':
                 if i == 0:
@@ -87,18 +90,20 @@ class StartTab(Tab):
     def device_index_changed(self):  # i is an index
         i = self.device_list.currentRow()
         self.device_list_row = i
-        logger.debug(f"device_index_changed {i}")
+        self.logger.debug(f"device_index_changed {i}")
         if i == -1:
             return
+        from ok import og
         og.device_manager.set_preferred_device(index=i)
-        logger.debug(f"device_index_changed done {i}")
+        self.logger.debug(f"device_index_changed done {i}")
 
     def update_capture(self, finished):
+        from ok import og
         devices = og.device_manager.get_devices()
         preferred = og.device_manager.config.get("preferred")
         selected = self.device_list_row
 
-        logger.debug('update_capture')
+        self.logger.debug('update_capture')
 
         # Update the existing items in the device_list and og.device_manager.get_devices()
         for row, device in enumerate(devices):
@@ -133,6 +138,7 @@ class StartTab(Tab):
             self.capture_list.update_for_device()
 
     def update_selection(self):
+        from ok import og
         if og.executor.paused:
             self.device_list.setSelectionMode(QAbstractItemView.SingleSelection)
             self.capture_list.setSelectionMode(QAbstractItemView.SingleSelection)
@@ -209,12 +215,13 @@ class HwndChooser(BaseWindow):  # Assuming BaseWindow is defined elsewhere
                         self.list_widget.addItem(f"{title} ({exe_name})")
                         self.hwnds.append((hwnd, exe_name, process.exe()))
                 except Exception as e:
-                    logger.error('get process error', e)
+                    self.logger.error('get process error', e)
 
     def confirm(self):
         row = self.list_widget.currentRow()
         if row > 0:
             alert_info(self.tr('{} Selected').format(self.list_widget.item(row).text()))
+            from ok import og
             og.device_manager.select_hwnd(self.hwnds[row][2], self.hwnds[row][0])
         self.close()
 

@@ -2,11 +2,9 @@ from PySide6.QtCore import QCoreApplication
 from PySide6.QtWidgets import QWidget, QHBoxLayout, QSpacerItem, QSizePolicy, QVBoxLayout
 from qfluentwidgets import PushButton, ComboBox, FluentIcon, PrimaryPushButton, BodyLabel, StateToolTip
 
-from ok import Logger
 from ok.gui.Communicate import communicate
 from ok.gui.launcher.DownloadBar import DownloadBar
 
-logger = Logger.get_logger(__name__)
 
 
 class UpdateBar(QWidget):
@@ -128,7 +126,6 @@ class UpdateBar(QWidget):
         self.check_update_button.setDisabled(True)
 
     def update_running(self, running, updating=False):
-        logger.info(f'update_running {running}')
         self.update_button.setDisabled(running)
         self.check_update_button.setDisabled(running)
         self.update_sources.setDisabled(running)

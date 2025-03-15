@@ -5,7 +5,6 @@ from qfluentwidgets import ScrollArea
 from ok.gui.common.style_sheet import StyleSheet
 from ok.gui.widget.Card import Card
 from ok.gui.widget.StartLoadingDialog import StartLoadingDialog
-from ok import og
 
 
 class Tab(ScrollArea):
@@ -32,6 +31,7 @@ class Tab(ScrollArea):
 
     @property
     def exit_event(self):
+        from ok import og
         return og.ok.exit_event
 
     def show_loading_dialog(self):

@@ -2,10 +2,8 @@ from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QWidget, QHBoxLayout, QSpacerItem, QSizePolicy
 from qfluentwidgets import ProgressBar, BodyLabel
 
-from ok import Logger
 from ok.gui.Communicate import communicate
 
-logger = Logger.get_logger(__name__)
 
 
 class DownloadBar(QWidget):
