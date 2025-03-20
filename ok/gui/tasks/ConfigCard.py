@@ -39,7 +39,7 @@ class ConfigCard(ExpandSettingCard):
                 self.reset_config.clicked.connect(self.reset_clicked)
 
             if self.task and self.task.show_create_shortcut:
-                create_shortcut = PushButton(FluentIcon.CANCEL, self.tr("Add Start Menu Shortcut"))
+                create_shortcut = PushButton(FluentIcon.LINK, self.tr("Add Start Menu Shortcut"))
                 buttons_layout.addWidget(create_shortcut)
                 create_shortcut.clicked.connect(self.task.create_shortcut)
 
