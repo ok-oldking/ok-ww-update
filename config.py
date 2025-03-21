@@ -5,7 +5,7 @@ import numpy as np
 
 from ok import ConfigOption
 
-version = "v2.1.35"
+version = "v2.1.38"
 
 
 def calculate_pc_exe_path(running_path):
@@ -176,8 +176,8 @@ config = {
     ], 'trigger_tasks': [
         ["src.task.AutoCombatTask", "AutoCombatTask"],
         ["src.task.AutoPickTask", "AutoPickTask"],
+        ["src.task.AutoEnhanceEchoTask", "AutoEnhanceEchoTask"],
         ["src.task.SkipDialogTask", "AutoDialogTask"],
-        ["src.task.MouseResetTask", "MouseResetTask"],
         ["src.task.AutoLoginTask", "AutoLoginTask"],
-    ]
+    ], 'scene': ["src.scene.WWScene", "WWScene"],
 }
