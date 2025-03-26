@@ -5,7 +5,7 @@ import numpy as np
 
 from ok import ConfigOption
 
-version = "v2.1.41"
+version = "v2.1.42"
 
 
 def calculate_pc_exe_path(running_path):
@@ -45,7 +45,6 @@ def make_bottom_right_black(frame):
     except Exception as e:
         print(f"Error processing frame: {e}")
         return frame
-
 
 key_config_option = ConfigOption('Game Hotkey Config', {
     'HotKey Verify': False,
