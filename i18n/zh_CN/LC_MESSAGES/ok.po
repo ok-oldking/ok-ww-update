@@ -9,8 +9,8 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 
-msgid "Fleurdelys"
-msgstr "芙露德莉斯"
+msgid ""
+msgstr ""
 
 msgid "(1-6) Important, Choose which level to farm, lower levels might not produce a echo"
 msgstr "(1-6) 重要, 选择你对应世界等级可以产出声骸的难度, 从上到下为1-6"
@@ -107,9 +107,6 @@ msgstr "梦魇:无冠者"
 
 msgid "Nightmare: Mourning Aix"
 msgstr "梦魇:哀声鸷"
-
-msgid "Nightmare: Lampylumen Myriad"
-msgstr "梦魇:辉萤军势"
 
 msgid "Enable auto combat in Abyss, Game World etc"
 msgstr "在大世界,深渊,无音区等开启自动战斗"

@@ -14,9 +14,9 @@ class SettingTab(Tab):
 
     def __init__(self):
         super().__init__()
-        self.basic_group = SettingCardGroup(
-            self.tr('App Config'))
-        self.vBoxLayout.addWidget(self.basic_group)
+        self.personalGroup = SettingCardGroup(
+            self.tr('Personalization'))
+        self.vBoxLayout.addWidget(self.personalGroup)
 
         self.languageCard = ComboBoxSettingCard(
             cfg.language,
@@ -24,7 +24,7 @@ class SettingTab(Tab):
             self.tr('Language'),
             self.tr('Set your preferred language'),
             texts=['简体中文', 'English', self.tr('Use system setting')],
-            parent=self.basic_group
+            parent=self.personalGroup
         )
         self.config_groups = []
         self.app_group = None
@@ -37,7 +37,7 @@ class SettingTab(Tab):
 
     def __initLayout(self):
         # self.personalGroup.addSettingCard(self.themeCard)
-        self.basic_group.addSettingCard(self.languageCard)
+        self.personalGroup.addSettingCard(self.languageCard)
 
     def goto_config(self, key):
         to_scroll = None
@@ -57,10 +57,7 @@ class SettingTab(Tab):
                 self.tr('App Settings'))
             for name, config, option in global_configs:
                 card = GlobalConfigCard(config, option)
-                if name == 'Basic Options':
-                    self.basic_group.addSettingCard(card)
-                else:
-                    self.app_group.addSettingCard(card)
+                self.app_group.addSettingCard(card)
                 self.config_groups.append(card)
             self.vBoxLayout.addWidget(self.app_group)
 

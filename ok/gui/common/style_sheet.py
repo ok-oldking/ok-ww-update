@@ -14,6 +14,6 @@ class StyleSheet(StyleSheetBase, Enum):
     MESSAGE_WINDOW = "message_window"
     SETTING_INTERFACE = "setting_interface"
 
-    def path(self, theme=Theme.DARK):
+    def path(self, theme=Theme.AUTO):
         theme = qconfig.theme if theme == Theme.AUTO else theme
         return f":/qss/{theme.value.lower()}/{self.value}.qss"

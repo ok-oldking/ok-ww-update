@@ -1,6 +1,6 @@
-from enum import Enum
-
 from qfluentwidgets import FluentIconBase, Theme, qconfig
+
+from enum import Enum
 
 
 class OKIcon(FluentIconBase, Enum):
@@ -10,6 +10,6 @@ class OKIcon(FluentIconBase, Enum):
     DISCORD = "discord"
     HEART = "heart"
 
-    def path(self, theme=Theme.DARK):
+    def path(self, theme=Theme.AUTO):
         theme = qconfig.theme if theme == Theme.AUTO else theme
         return f':/qss/{theme.value.lower()}/{self.value}.svg'

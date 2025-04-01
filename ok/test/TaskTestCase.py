@@ -1,7 +1,6 @@
 import unittest
 
 from ok import Logger
-from ok.gui.common.config import Language, cfg
 from ok.test import init_ok, destroy_ok
 
 
@@ -11,15 +10,12 @@ class TaskTestCase(unittest.TestCase):
     config = None
     ok_map = {}
     logger = None
-    lang = Language.CHINESE_SIMPLIFIED
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
     @classmethod
     def setUpClass(cls):
-        cfg.language.value = cls.lang
-        print(f'set language to {cls.lang} {cfg.language.value}')
         init_ok(cls.config)
         logger = Logger.get_logger(__name__)
         TaskTestCase.logger = logger

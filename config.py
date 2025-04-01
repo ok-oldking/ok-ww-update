@@ -5,7 +5,7 @@ import numpy as np
 
 from ok import ConfigOption
 
-version = "v2.1.56"
+version = "z0.0.3"
 
 
 def calculate_pc_exe_path(running_path):
@@ -45,6 +45,7 @@ def make_bottom_right_black(frame):
     except Exception as e:
         print(f"Error processing frame: {e}")
         return frame
+
 
 key_config_option = ConfigOption('Game Hotkey Config', {
     'HotKey Verify': False,
@@ -115,9 +116,13 @@ config = {
         'git_url': 'https://github.com/ok-oldking/ok-ww-update.git',
         'pip_url': 'https://pypi.org/simple/'
     }, {
+        'name': '清华大学',
+        'git_url': 'https://e.coding.net/g-frfh1513/ok-wuthering-waves/ok-wuthering-waves.git',
+        'pip_url': 'https://pypi.tuna.tsinghua.edu.cn/simple'
+    }, {
         'name': 'China',
         'git_url': 'https://e.coding.net/g-frfh1513/ok-wuthering-waves/ok-wuthering-waves.git',
-        'pip_url': 'https://mirrors.aliyun.com/pypi/simple'
+        'pip_url': 'https://pypi.tuna.tsinghua.edu.cn/simple'
     }, {
         'name': '腾讯云',
         'git_url': 'https://e.coding.net/g-frfh1513/ok-wuthering-waves/ok-wuthering-waves.git',
@@ -126,7 +131,7 @@ config = {
         'name': '阿里云',
         'git_url': 'https://e.coding.net/g-frfh1513/ok-wuthering-waves/ok-wuthering-waves.git',
         'pip_url': 'https://mirrors.aliyun.com/pypi/simple'
-    }
+    },
     ]},
     'links': {
         'default': {
@@ -167,7 +172,7 @@ config = {
         ["src.task.TacetTask", "TacetTask"],
         ["src.task.FarmEchoTask", "FarmEchoTask"],
         ["src.task.FarmWorldBossTask", "FarmWorldBossTask"],
-        ["ok", "DiagnosisTask"],
+        ["src.task.DiagnosisTask", "DiagnosisTask"],
     ], 'trigger_tasks': [
         ["src.task.AutoCombatTask", "AutoCombatTask"],
         ["src.task.AutoPickTask", "AutoPickTask"],
