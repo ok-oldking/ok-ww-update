@@ -27,9 +27,6 @@ class BaseWindow(BackgroundAnimationWidget, FramelessWindow, BaseLoading):
         og.set_dpi_scaling(self)
         # FluentStyleSheet.FLUENT_WINDOW.apply(self)
 
-        # enable mica effect on win11
-        self.setMicaEffectEnabled(True)
-
         # show system title bar buttons on macOS
         if sys.platform == "darwin":
             self.setSystemTitleBarButtonVisible(True)
@@ -64,8 +61,7 @@ class BaseWindow(BackgroundAnimationWidget, FramelessWindow, BaseLoading):
         return QColor(0, 0, 0, 0)
 
     def _onThemeChangedFinished(self):
-        if self.isMicaEffectEnabled():
-            self.windowEffect.setMicaEffect(self.winId(), isDarkTheme())
+        pass
 
     def paintEvent(self, e):
         super().paintEvent(e)
@@ -75,18 +71,7 @@ class BaseWindow(BackgroundAnimationWidget, FramelessWindow, BaseLoading):
         painter.drawRect(self.rect())
 
     def setMicaEffectEnabled(self, isEnabled: bool):
-        """ set whether the mica effect is enabled, only available on Win11 """
-        if sys.platform != 'win32' or sys.getwindowsversion().build < 22000:
-            return
-
-        self._isMicaEnabled = isEnabled
-
-        if isEnabled:
-            self.windowEffect.setMicaEffect(self.winId(), isDarkTheme())
-        else:
-            self.windowEffect.removeBackgroundEffect(self.winId())
-
-        self.setBackgroundColor(self._normalBackgroundColor())
+        pass
 
     def show_notification(self, message, title=None, error=False, tray=False):
         show_info_bar(self.window(), message, title, error)
