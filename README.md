@@ -10,7 +10,7 @@
 ![Static Badge](https://img.shields.io/badge/platfrom-Windows-blue?color=blue)
 [![GitHub release (with filter)](https://img.shields.io/github/v/release/ok-oldking/ok-wuthering-waves)](https://github.com/ok-oldking/ok-wuthering-waves/releases)
 [![GitHub all releases](https://img.shields.io/github/downloads/ok-oldking/ok-wuthering-waves/total)](https://github.com/ok-oldking/ok-wuthering-waves/releases)
-[![Static Badge](https://img.shields.io/badge/Discord-blue?link=https%3A%2F%2Fdiscord.gg%2FZMHXx5QBuH)](https://discord.gg/Sy6etyCRed)
+[![Discord](https://img.shields.io/discord/296598043787132928?color=5865f2&label=%20Discord)](https://discord.gg/vVyCatEBgA)
 
 ### English Readme | [中文说明](README_cn.md)
 
@@ -38,11 +38,9 @@ Use Python 3.12, other versions might work but are not tested.
 
 ```
 git clone https://github.com/ok-oldking/ok-wuthering-waves
-pip install -r requirements.txt #install python dependencies
+pip install -r requirements.txt --upgrade #install python dependencies, you might need do run this again after updating the code
 python main.py # run the release version
 python main_debug.py # run the debug version
-python main_gpu_debug.py # run the gpu debug version
-python main_gpu.py # run the gpu release version
 ```
 
 ### Command Line Arguments
