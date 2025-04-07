@@ -5,7 +5,7 @@ import numpy as np
 
 from ok import ConfigOption
 
-version = "v2.1.74"
+version = "v2.1.75"
 
 
 def calculate_pc_exe_path(running_path):
@@ -160,8 +160,7 @@ config = {
         ["src.task.TacetTask", "TacetTask"],
         ["src.task.FarmEchoTask", "FarmEchoTask"],
         ["src.task.FarmWorldBossTask", "FarmWorldBossTask"],
-        # ["src.task.FarmMapTask", "FarmMapTask"],
-        # ["src.task.Farm13CTask", "Farm13CTask"],
+        ["src.task.FarmMapTask", "FarmMapTask"],
         ["ok", "DiagnosisTask"],
     ], 'trigger_tasks': [
         ["src.task.AutoCombatTask", "AutoCombatTask"],
