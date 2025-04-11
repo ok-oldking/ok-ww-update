@@ -5,7 +5,7 @@ import numpy as np
 
 from ok import ConfigOption
 
-version = "v2.1.89"
+version = "v2.1.90"
 
 
 def calculate_pc_exe_path(running_path):
@@ -77,6 +77,10 @@ config = {
     'ocr': {
         'lib': 'rapidocr_openvino',
         'target_height': 1080,
+        'params': {
+            'Global.with_openvino': True,
+            'EngineConfig.openvino.inference_num_threads': 1,
+        }
     },
     'my_app': ['src.globals', 'Globals'],
     'start_timeout': 120,  # default 60
