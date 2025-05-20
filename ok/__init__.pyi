@@ -5,14 +5,13 @@ import logging
 import re
 import threading
 from dataclasses import dataclass, field
-from logging.handlers import TimedRotatingFileHandler, QueueListener, QueueHandler
+from logging.handlers import TimedRotatingFileHandler
 from typing import Dict, List, Optional, Union, Tuple
 
 import numpy as np
-from PySide6.QtCore import QCoreApplication, Qt, QEvent, QSize, QLocale
+from PySide6.QtCore import QEvent
 from PySide6.QtGui import QIcon
-from qfluentwidgets import FluentIcon, NavigationItemPosition, MSFluentWindow, InfoBarPosition, InfoBar, MessageBox, \
-    qconfig
+from qfluentwidgets import FluentIcon, MSFluentWindow
 
 from ok.gui.Communicate import communicate
 from ok.gui.util.Alert import alert_error, alert_info
@@ -648,7 +647,7 @@ class Box:
     width: int
     height: int
     confidence: float
-    name: object
+    name: str
 
     def __init__(self, x, y, width: int = ..., height: int = ..., confidence: float = ..., name: Optional[object] = ...,
                  to_x: int = ..., to_y: int = ...):
@@ -2686,7 +2685,7 @@ class ExecutorOperation:
         ...
 
     @staticmethod
-    def draw_boxes(feature_name: Optional[str] = ..., boxes: Optional[list[Box]] = ..., color: str = ...):
+    def draw_boxes(feature_name: Optional[str] = ..., boxes: Optional[list[Box] | Box] = ..., color: str = ...):
         """
         绘制 Box。
         """
