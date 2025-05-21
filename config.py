@@ -5,7 +5,7 @@ import numpy as np
 
 from ok import ConfigOption, get_path_relative_to_exe
 
-version = "v2.3.46"
+version = "v2.3.47"
 
 
 def calculate_pc_exe_path(running_path):
@@ -105,6 +105,9 @@ config = {
         'check_night_light': True,
         'force_no_night_light': False,
         'require_bg': True
+    },
+    'analytics': {
+        'report_url': 'http://report.ok-script.cn:8080/report',
     },
     'window_size': {
         'width': 820,
