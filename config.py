@@ -5,7 +5,7 @@ import numpy as np
 
 from ok import ConfigOption, get_path_relative_to_exe
 
-version = "v2.3.57"
+version = "v2.3.58"
 
 
 def calculate_pc_exe_path(running_path):
@@ -117,7 +117,8 @@ config = {
     },
     'supported_resolution': {
         'ratio': '16:9',
-        'min_size': (1280, 720)
+        'min_size': (1280, 720),
+        'resize_to': [(2560, 1440), (1920, 1080), (1600, 900), (1280, 720)],
     },
     'git_update': {'sources': [{
         'name': 'Global',
