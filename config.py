@@ -5,7 +5,7 @@ import numpy as np
 
 from ok import ConfigOption, get_path_relative_to_exe
 
-version = "v2.4.6"
+version = "v2.4.7"
 
 
 def calculate_pc_exe_path(running_path):
@@ -48,7 +48,7 @@ def make_bottom_right_black(frame):
 
 
 key_config_option = ConfigOption('Game Hotkey Config', {
-    'Auto Set HotKey': True,
+    'Auto Set HotKey': False,
     'Echo Key': 'q',
     'Liberation Key': 'r',
     'Resonance Key': 'e',
