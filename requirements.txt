@@ -4,7 +4,10 @@
 #
 #    pip-compile '.\requirements.in'
 #
+    # via -r .\requirements.in
+onnxocr-ppocrv4==0.0.5
 
+pyappify==0.0.5
 
 build==1.2.2.post1
     # via pip-tools
@@ -20,8 +23,6 @@ colorama==0.4.6
     # via
     #   build
     #   click
-coloredlogs==15.0.1
-    # via onnxruntime-directml
 comtypes==1.4.10
     # via pycaw
 cryptography==43.0.3
@@ -29,44 +30,35 @@ cryptography==43.0.3
 darkdetect==0.8.0
     # via
     #   pyside6-fluent-widgets
-flatbuffers==25.2.10
-    # via onnxruntime-directml
 gitdb==4.0.12
     # via gitpython
 gitpython==3.1.44
-humanfriendly==10.0
-    # via coloredlogs
 idna==3.10
     # via requests
 mouse==0.7.1
     # via -r .\requirements.in
-mpmath==1.3.0
-    # via sympy
 msgpack==1.1.0
     # via -r .\requirements.in
 numpy==2.2.4
     # via
     #   -r .\requirements.in
-    #   onnxruntime-directml
     #   opencv-python
+    #   openvino
     #   shapely
-    # via -r .\requirements.in
-onnxocr-ppocrv4==0.0.4
-    # via -r .\requirements.in
-onnxruntime-directml==1.22.0
-    # via -r .\requirements.in
 opencv-python==4.11.0.86
     # via -r .\requirements.in
+openvino==2025.2.0
+    # via -r .\requirements.in
+openvino-telemetry==2025.1.0
+    # via openvino
 packaging==24.2
     # via
     #   build
-    #   onnxruntime-directml
+    #   openvino
 pillow==11.1.0
     # via onnxocr-ppocrv4
 pip-tools==7.4.1
     # via -r .\requirements.in
-protobuf==6.31.1
-    # via onnxruntime-directml
 psutil==6.1.0
     # via
     #   -r .\requirements.in
@@ -83,8 +75,6 @@ pyproject-hooks==1.2.0
     # via
     #   build
     #   pip-tools
-pyreadline3==3.5.4
-    # via humanfriendly
 pyside6==6.8.2.1
     # via pyside6-fluent-widgets
 pyside6-addons==6.8.2.1
@@ -113,8 +103,6 @@ shiboken6==6.8.2.1
     #   pyside6-essentials
 smmap==5.0.2
     # via gitdb
-sympy==1.14.0
-    # via onnxruntime-directml
 typing-extensions==4.12.2
     # via
     #   -r .\requirements.in
