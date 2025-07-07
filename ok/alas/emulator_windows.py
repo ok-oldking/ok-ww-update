@@ -5,279 +5,12 @@ import typing as t
 import winreg
 from dataclasses import dataclass
 
-from ok.alas.utils import iter_folder
-
-
-def abspath(path):
-    return os.path.abspath(path)
-
-
-def get_serial_pair(serial):
-    """
-    Args:
-        serial (str):
-
-    Returns:
-        str, str: `127.0.0.1:5555+{X}` and `emulator-5554+{X}`, 0 <= X <= 32
-    """
-    if serial.startswith('127.0.0.1:'):
-        try:
-            port = int(serial[10:])
-            if 5555 <= port <= 5555 + 32:
-                return f'127.0.0.1:{port}', f'emulator-{port - 1}'
-        except (ValueError, IndexError):
-            pass
-    if serial.startswith('emulator-'):
-        try:
-            port = int(serial[9:])
-            if 5554 <= port <= 5554 + 32:
-                return f'127.0.0.1:{port + 1}', f'emulator-{port}'
-        except (ValueError, IndexError):
-            pass
-
-    return None, None
-
-
-def remove_duplicated_path(paths):
-    """
-    Args:
-        paths (list[str]):
-
-    Returns:
-        list[str]:
-    """
-    paths = sorted(set(paths))
-    dic = {}
-    for path in paths:
-        dic.setdefault(path.lower(), path)
-    return list(dic.values())
-
-
-@dataclass
-class EmulatorInstanceBase:
-    # Serial for adb connection
-    serial: str
-    # Emulator instance name, used for start/stop emulator
-    name: str
-    # Path to emulator .exe
-    path: str
-
-    def __str__(self):
-        return f'{self.type}(serial="{self.serial}", name="{self.name}", path="{self.path}")'
-
-    @property
-    def type(self) -> str:
-        """
-        Returns:
-            str: Emulator type, such as Emulator.NoxPlayer
-        """
-        return self.emulator.type
-
-    @property
-    def emulator(self):
-        """
-        Returns:
-            Emulator:
-        """
-        return EmulatorBase(self.path)
-
-    def __eq__(self, other):
-        if isinstance(other, str) and self.type == other:
-            return True
-        if isinstance(other, list) and self.type in other:
-            return True
-        if isinstance(other, EmulatorInstanceBase):
-            return super().__eq__(other) and self.type == other.type
-        return super().__eq__(other)
-
-    def __hash__(self):
-        return hash(str(self))
-
-    def __bool__(self):
-        return True
-
-    @property
-    def MuMuPlayer12_id(self):
-        """
-        Convert MuMu 12 instance name to instance id.
-        Example names:
-            MuMuPlayer-12.0-3
-            YXArkNights-12.0-1
-
-        Returns:
-            int: Instance ID, or None if this is not a MuMu 12 instance
-        """
-        res = re.search(r'MuMuPlayer(?:Global)?-12.0-(\d+)', self.name)
-        if res:
-            return int(res.group(1))
-        res = re.search(r'YXArkNights-12.0-(\d+)', self.name)
-        if res:
-            return int(res.group(1))
-
-        return None
-
-    @property
-    def player_id(self):
-
-        # Find all integer groups in the string that are at the end of the string
-        integers = re.findall(r'\d+$', self.name)
-        # Return the last integer if it exists, otherwise return 0
-        return int(integers[0]) if integers else 0
-
-
-class EmulatorBase:
-    # Values here must match those in argument.yaml EmulatorInfo.Emulator.option
-    NoxPlayer = 'NoxPlayer'
-    NoxPlayer64 = 'NoxPlayer64'
-    NoxPlayerFamily = [NoxPlayer, NoxPlayer64]
-    BlueStacks4 = 'BlueStacks4'
-    BlueStacks5 = 'BlueStacks5'
-    BlueStacks4HyperV = 'BlueStacks4HyperV'
-    BlueStacks5HyperV = 'BlueStacks5HyperV'
-    BlueStacksFamily = [BlueStacks4, BlueStacks5]
-    LDPlayer3 = 'LDPlayer3'
-    LDPlayer4 = 'LDPlayer4'
-    LDPlayer9 = 'LDPlayer9'
-    LDPlayerFamily = [LDPlayer3, LDPlayer4, LDPlayer9]
-    MuMuPlayer = 'MuMuPlayer'
-    MuMuPlayerX = 'MuMuPlayerX'
-    MuMuPlayer12 = 'MuMuPlayer12'
-    MuMuPlayerFamily = [MuMuPlayer, MuMuPlayerX, MuMuPlayer12]
-    MEmuPlayer = 'MEmuPlayer'
-
-    @classmethod
-    def path_to_type(cls, path: str) -> str:
-        """
-        Args:
-            path: Path to .exe file
-
-        Returns:
-            str: Emulator type, such as Emulator.NoxPlayer,
-                or '' if this is not a emulator.
-        """
-        return ''
-
-    def iter_instances(self) -> t.Iterable[EmulatorInstanceBase]:
-        """
-        Yields:
-            EmulatorInstance: Emulator instances found in this emulator
-        """
-        pass
-
-    def iter_adb_binaries(self) -> t.Iterable[str]:
-        """
-        Yields:
-            str: Filepath to adb binaries found in this emulator
-        """
-        pass
-
-    def __init__(self, path):
-        # Path to .exe file
-        self.path = path
-        # Path to emulator folder
-        self.dir = os.path.dirname(path)
-        # str: Emulator type, or '' if this is not a emulator.
-        self.type = self.__class__.path_to_type(path)
-
-    def __eq__(self, other):
-        if isinstance(other, str) and self.type == other:
-            return True
-        if isinstance(other, list) and self.type in other:
-            return True
-        return super().__eq__(other)
-
-    def __str__(self):
-        return f'{self.type}(path="{self.path}")'
-
-    __repr__ = __str__
-
-    def __hash__(self):
-        return hash(self.path)
-
-    def __bool__(self):
-        return True
-
-    def abspath(self, path, folder=None):
-        if folder is None:
-            folder = self.dir
-        return abspath(os.path.join(folder, path))
-
-    @classmethod
-    def is_emulator(cls, path: str) -> bool:
-        """
-        Args:
-            path: Path to .exe file.
-
-        Returns:
-            bool: If this is a emulator.
-        """
-        return bool(cls.path_to_type(path))
-
-    def list_folder(self, folder, is_dir=False, ext=None):
-        """
-        Safely list files in a folder
-
-        Args:
-            folder:
-            is_dir:
-            ext:
-
-        Returns:
-            list[str]:
-        """
-        folder = self.abspath(folder)
-        return list(iter_folder(folder, is_dir=is_dir, ext=ext))
-
-
-class EmulatorManagerBase:
-    @staticmethod
-    def iter_running_emulator():
-        """
-        Yields:
-            str: Path to emulator executables, may contains duplicate values
-        """
-        return
-
-    @property
-    def all_emulators(self) -> t.List[EmulatorBase]:
-        """
-        Get all emulators installed on current computer.
-        """
-        return []
-
-    @property
-    def all_emulator_instances(self) -> t.List[EmulatorInstanceBase]:
-        """
-        Get all emulator instances installed on current computer.
-        """
-        return []
-
-    @property
-    def all_emulator_serials(self) -> t.List[str]:
-        """
-        Returns:
-            list[str]: All possible serials on current computer.
-        """
-        out = []
-        for emulator in self.all_emulator_instances:
-            out.append(emulator.serial)
-            # Also add serial like `emulator-5554`
-            port_serial, emu_serial = get_serial_pair(emulator.serial)
-            if emu_serial:
-                out.append(emu_serial)
-        return out
-
-    @property
-    def all_adb_binaries(self) -> t.List[str]:
-        """
-        Returns:
-            list[str]: All adb binaries of emulators on current computer.
-        """
-        out = []
-        for emulator in self.all_emulators:
-            for exe in emulator.iter_adb_binaries():
-                out.append(exe)
-        return out
+# module/device/platform/emulator_base.py
+# module/device/platform/emulator_windows.py
+# Will be used in Alas Easy Install, they shouldn't import any Alas modules.
+from ok.alas.emulator_base import EmulatorBase, EmulatorInstanceBase, EmulatorManagerBase, \
+    remove_duplicated_path
+from ok.alas.utils import cached_property, iter_folder, iter_process
 
 
 @dataclass
@@ -319,9 +52,12 @@ def list_key(reg) -> t.List[RegValue]:
     return rows
 
 
+def abspath(path):
+    return os.path.abspath(path).replace('\\', '/')
+
 
 class EmulatorInstance(EmulatorInstanceBase):
-    @property
+    @cached_property
     def emulator(self):
         """
         Returns:
@@ -383,7 +119,7 @@ class Emulator(EmulatorBase):
                 return cls.MuMuPlayerX
             else:
                 return cls.MuMuPlayer
-        if exe == 'mumuplayer.exe':
+        if exe in ['mumuplayer.exe', 'mumunxmain.exe']:
             return cls.MuMuPlayer12
         if exe == 'memu.exe':
             return cls.MEmuPlayer
@@ -420,6 +156,33 @@ class Emulator(EmulatorBase):
             yield exe
 
     @staticmethod
+    def single_to_console(exe: str):
+        """
+        Convert a string that might be a single instance executable to its console.
+
+        Args:
+            exe (str): Path to emulator executable
+
+        Returns:
+            str: Path to emulator console
+        """
+        if 'MuMuPlayer.exe' in exe:
+            return exe.replace('MuMuPlayer.exe', 'MuMuManager.exe')
+        # MuMuPlayer12 5.0
+        elif 'MuMuPlayer.exe' in exe:
+            return exe.replace('MuMuNxMain.exe', 'MuMuManager.exe')
+        elif 'LDPlayer.exe' in exe:
+            return exe.replace('LDPlayer.exe', 'ldconsole.exe')
+        elif 'dnplayer.exe' in exe:
+            return exe.replace('dnplayer.exe', 'ldconsole.exe')
+        elif 'Bluestacks.exe' in exe:
+            return exe.replace('Bluestacks.exe', 'bsconsole.exe')
+        elif 'MEmu.exe' in exe:
+            return exe.replace('MEmu.exe', 'memuc.exe')
+        else:
+            return exe
+
+    @staticmethod
     def vbox_file_to_serial(file: str) -> str:
         """
         Args:
@@ -435,7 +198,7 @@ class Emulator(EmulatorBase):
                     # <Forwarding name="port2" proto="1" hostip="127.0.0.1" hostport="62026" guestport="5555"/>
                     res = regex.search(line)
                     if res:
-                        return str(f'127.0.0.1:{res.group(1)}')
+                        return f'127.0.0.1:{res.group(1)}'
             return ''
         except FileNotFoundError:
             return ''
@@ -539,12 +302,23 @@ class Emulator(EmulatorBase):
             for folder in self.list_folder('../vms', is_dir=True):
                 for file in iter_folder(folder, ext='.nemu'):
                     serial = Emulator.vbox_file_to_serial(file)
+                    name = os.path.basename(folder)
                     if serial:
                         yield EmulatorInstance(
                             serial=serial,
-                            name=os.path.basename(folder),
+                            name=name,
                             path=self.path,
                         )
+                    # Fix for MuMu12 v4.0.4, default instance of which has no forward record in vbox config
+                    else:
+                        instance = EmulatorInstance(
+                            serial=serial,
+                            name=name,
+                            path=self.path,
+                        )
+                        if instance.MuMuPlayer12_id:
+                            instance.serial = f'127.0.0.1:{16384 + 32 * instance.MuMuPlayer12_id}'
+                            yield instance
         elif self == Emulator.MEmuPlayer:
             # ./MemuHyperv VMs/{name}/{name}.memu
             for folder in self.list_folder('./MemuHyperv VMs', is_dir=True):
@@ -577,6 +351,8 @@ class Emulator(EmulatorBase):
         exe = self.abspath('./adb.exe')
         if os.path.exists(exe):
             yield exe
+
+
 
 
 class EmulatorManager(EmulatorManagerBase):
@@ -690,7 +466,9 @@ class EmulatorManager(EmulatorManagerBase):
             'leidian9',
             'Nemu',
             'Nemu9',
-            'MuMuPlayer-12.0'
+            'MuMuPlayer',
+            'MuMuPlayer-12.0',
+            'MuMu Player 12.0',
             'MEmu',
         ]
         for path in known_uninstall_registry_path:
@@ -723,26 +501,12 @@ class EmulatorManager(EmulatorManagerBase):
         Yields:
             str: Path to emulator executables, may contains duplicate values
         """
-        try:
-            import psutil
-        except ModuleNotFoundError:
-            return
-        # Since this is a one-time-usage, we access psutil._psplatform.Process directly
-        # to bypass the call of psutil.Process.is_running().
-        # This only costs about 0.017s.
-        for pid in psutil.pids():
-            proc = psutil._psplatform.Process(pid)
-            try:
-                exe = proc.cmdline()
-                exe = exe[0]
-            except (psutil.AccessDenied, psutil.NoSuchProcess, IndexError):
-                # psutil.AccessDenied
-                continue
-
+        for pid, cmdline in iter_process():
+            exe = cmdline[0]
             if Emulator.is_emulator(exe):
                 yield exe
 
-    @property
+    @cached_property
     def all_emulators(self) -> t.List[Emulator]:
         """
         Get all emulators installed on current computer.
@@ -793,7 +557,7 @@ class EmulatorManager(EmulatorManagerBase):
         exe = [Emulator(path) for path in remove_duplicated_path(exe)]
         return exe
 
-    @property
+    @cached_property
     def all_emulator_instances(self) -> t.List[EmulatorInstance]:
         """
         Get all emulator instances installed on current computer.
@@ -806,3 +570,7 @@ class EmulatorManager(EmulatorManagerBase):
         return instances
 
 
+if __name__ == '__main__':
+    self = EmulatorManager()
+    for emu in self.all_emulator_instances:
+        print(emu)

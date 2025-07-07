@@ -9,6 +9,7 @@ import cv2
 import numpy as np
 
 from ok import Logger
+from ok.alas.utils import cached_property
 from ok.capture.adb.deep import deep_get
 from ok.capture.adb.minitouch import insert_swipe
 from ok.capture.adb.nemu_utils import retry_sleep, RETRY_TRIES
@@ -214,27 +215,36 @@ class NemuIpcImpl:
         self.instance_id: int = instance_id
         self.display_id: int = display_id
 
-        ipc_dll = os.path.abspath(os.path.join(nemu_folder, './shell/sdk/external_renderer_ipc.dll'))
+        # try to load dll from various path
+        list_dll = [
+            # MuMuPlayer12
+            os.path.abspath(os.path.join(nemu_folder, './shell/sdk/external_renderer_ipc.dll')),
+            # MuMuPlayer12 5.0
+            os.path.abspath(os.path.join(nemu_folder, './nx_device/12.0/shell/sdk/external_renderer_ipc.dll')),
+        ]
+        self.lib = None
+        for ipc_dll in list_dll:
+            if not os.path.exists(ipc_dll):
+                continue
+            try:
+                self.lib = ctypes.CDLL(ipc_dll)
+                break
+            except OSError as e:
+                logger.error(e)
+                logger.error(f'ipc_dll={ipc_dll} exists, but cannot be loaded')
+                continue
+        if self.lib is None:
+            # not found
+            raise NemuIpcIncompatible(
+                f'NemuIpc requires MuMu12 version >= 3.8.13, please check your version. '
+                f'None of the following path exists: {list_dll}')
+        # success
         logger.info(
             f'NemuIpcImpl init, '
             f'nemu_folder={nemu_folder}, '
-            f'ipc_dll={ipc_dll}, '
             f'instance_id={instance_id}, '
             f'display_id={display_id}'
         )
-
-        try:
-            self.lib = ctypes.CDLL(ipc_dll)
-        except OSError as e:
-            logger.error(e)
-            # OSError: [WinError 126] 找不到指定的模块。
-            if not os.path.exists(ipc_dll):
-                raise NemuIpcIncompatible(
-                    f'ipc_dll={ipc_dll} does not exist, '
-                    f'NemuIpc requires MuMu12 version >= 3.8.13, please check your version')
-            else:
-                raise NemuIpcIncompatible(
-                    f'ipc_dll={ipc_dll} exists, but cannot be loaded')
         self.connect_id: int = 0
         self.width = 0
         self.height = 0
@@ -339,7 +349,6 @@ class NemuIpcImpl:
             raise NemuIpcError('nemu_capture_display failed during get_resolution()')
         self.width = width_ptr.contents.value
         self.height = height_ptr.contents.value
-        # logger.info(f'nemu_capture_display returned {self.width} x {self.height}')
 
     def _screenshot(self):
         if self.connect_id == 0:
@@ -389,9 +398,7 @@ class NemuIpcImpl:
             int, int
         """
         x, y = int(x), int(y)
-        logger.debug(f'convert {x},{y}')
-        # x, y = self.height - y, x
-        logger.debug(f'converted {x},{y}')
+        x, y = self.height - y, x
         return x, y
 
     @retry
@@ -404,7 +411,7 @@ class NemuIpcImpl:
         if self.height == 0:
             self.get_resolution()
 
-        # x, y = self.convert_xy(x, y)
+        x, y = self.convert_xy(x, y)
 
         ret = self.run_func(
             self.lib.nemu_input_event_touch_down,
@@ -463,23 +470,25 @@ class NemuIpc:
         self.nemu_ipc = self.init_nemu_ipc()
 
     def init_nemu_ipc(self) -> NemuIpcImpl:
-        """
-        Initialize a nemu ipc implementation
-        """
-        # Try existing settings first
-        if self.nemu_folder:
-            if 'MuMuPlayerGlobal' in self.nemu_folder:
-                logger.error(f'nemu_ipc is not available on MuMuPlayerGlobal, {self.nemu_folder}')
-                raise Exception
-            try:
-                return NemuIpcImpl(
-                    nemu_folder=self.nemu_folder,
-                    instance_id=self.instance_id,
-                    display_id=0
-                ).__enter__()
-            except (NemuIpcIncompatible, NemuIpcError) as e:
-                logger.error(e)
-                logger.error('Emulator info incorrect')
+        # Search emulator instance
+        # with E:\ProgramFiles\MuMuPlayer-12.0\shell\MuMuPlayer.exe
+        # installation path is E:\ProgramFiles\MuMuPlayer-12.0
+        if self.instance_id is None:
+            logger.error('Unable to use NemuIpc because emulator instance not found')
+            raise Exception
+        if 'MuMuPlayerGlobal' in self.nemu_folder:
+            logger.info(f'nemu_ipc is not available on MuMuPlayerGlobal, {self.nemu_folder}')
+            raise Exception
+        try:
+            return NemuIpcImpl(
+                nemu_folder=self.nemu_folder,
+                instance_id=self.instance_id,
+                display_id=0
+            ).__enter__()
+        except (NemuIpcIncompatible, NemuIpcError, JobTimeout) as e:
+            logger.error(e)
+            logger.error('Unable to initialize NemuIpc')
+            raise Exception
 
     @staticmethod
     def check_mumu_app_keep_alive_400(file):
@@ -505,6 +514,7 @@ class NemuIpc:
 
         if str(value).lower() == 'true':
             # https://mumu.163.com/help/20230802/35047_1102450.html
+            logger.critical('Please turn off "Keep alive in the background" in the settings or MuMuPlayer')
             logger.critical('请在MuMu模拟器设置内关闭 "后台挂机时保活运行"')
             raise Exception
         return True
