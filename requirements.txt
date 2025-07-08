@@ -4,6 +4,7 @@
 #
 #    pip-compile '.\requirements.in'
 #
+ok-script==0.0.596
     # via -r .\requirements.in
 onnxocr-ppocrv4==0.0.5
 
@@ -29,10 +30,12 @@ cryptography==43.0.3
     # via -r .\requirements.in
 darkdetect==0.8.0
     # via
+    #   ok-script
     #   pyside6-fluent-widgets
 gitdb==4.0.12
     # via gitpython
 gitpython==3.1.44
+    # via ok-script
 idna==3.10
     # via requests
 mouse==0.7.1
@@ -62,6 +65,7 @@ pip-tools==7.4.1
 psutil==6.1.0
     # via
     #   -r .\requirements.in
+    #   ok-script
     #   pycaw
 pycaw==20240210
     # via -r .\requirements.in
@@ -81,19 +85,23 @@ pyside6-addons==6.8.2.1
     # via pyside6
 pyside6-essentials==6.8.2.1
     # via
+    #   ok-script
     #   pyside6
     #   pyside6-addons
 pyside6-fluent-widgets==1.7.6
     # via -r .\requirements.in
 pysidesix-frameless-window==0.6.2
     # via
+    #   ok-script
     #   pyside6-fluent-widgets
 pywin32==310
     # via
+    #   ok-script
     #   pysidesix-frameless-window
 requests==2.32.3
     # via
     #   -r .\requirements.in
+    #   ok-script
 shapely==2.0.7
     # via onnxocr-ppocrv4
 shiboken6==6.8.2.1
@@ -106,6 +114,7 @@ smmap==5.0.2
 typing-extensions==4.12.2
     # via
     #   -r .\requirements.in
+    #   ok-script
 urllib3==2.3.0
     # via requests
 wheel==0.45.1
