@@ -562,6 +562,8 @@ def get_file_in_path_or_cwd(path, file):
         return os.path.join(path, file)
     elif os.path.exists(file):
         return file
+    elif os.path.exists(os.path.join('src', file)):
+        return os.path.join('src', file)
     raise FileNotFoundError(f'{path} {file} not found')
 
 
