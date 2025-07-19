@@ -5,7 +5,7 @@ import numpy as np
 
 from ok import ConfigOption
 
-version = "v2.4.72"
+version = "v2.4.75"
 
 
 def calculate_pc_exe_path(running_path):
@@ -171,6 +171,7 @@ config = {
     'onetime_tasks': [  # tasks to execute
         ["src.task.DailyTask", "DailyTask"],
         ["src.task.FarmEchoTask", "FarmEchoTask"],
+        ["src.task.AutoRogueTask", "AutoRogueTask"],
         ["src.task.FiveToOneTask", "FiveToOneTask"],
         ["src.task.ForgeryTask", "ForgeryTask"],
         ["src.task.SimulationTask", "SimulationTask"],
