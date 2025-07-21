@@ -9,6 +9,7 @@ import cv2
 import numpy as np
 
 from ok import Logger
+from ok.alas.utils import cached_property
 from ok.capture.adb.deep import deep_get
 from ok.capture.adb.minitouch import insert_swipe
 from ok.capture.adb.nemu_utils import retry_sleep, RETRY_TRIES
@@ -191,7 +192,7 @@ def retry(func):
                     self.reconnect()
             # Unknown, probably a trucked image
             except Exception as e:
-                logger.error("retry error", e)
+                logger.exception(e)
 
                 def init():
                     pass
@@ -229,7 +230,8 @@ class NemuIpcImpl:
                 self.lib = ctypes.CDLL(ipc_dll)
                 break
             except OSError as e:
-                logger.error(f'ipc_dll={ipc_dll} exists, but cannot be loaded', e)
+                logger.error(e)
+                logger.error(f'ipc_dll={ipc_dll} exists, but cannot be loaded')
                 continue
         if self.lib is None:
             # not found
@@ -409,7 +411,7 @@ class NemuIpcImpl:
         if self.height == 0:
             self.get_resolution()
 
-        # x, y = self.convert_xy(x, y)
+        x, y = self.convert_xy(x, y)
 
         ret = self.run_func(
             self.lib.nemu_input_event_touch_down,
@@ -484,7 +486,8 @@ class NemuIpc:
                 display_id=0
             ).__enter__()
         except (NemuIpcIncompatible, NemuIpcError, JobTimeout) as e:
-            logger.error('Unable to initialize NemuIpc', e)
+            logger.error(e)
+            logger.error('Unable to initialize NemuIpc')
             raise Exception
 
     @staticmethod

@@ -3,9 +3,9 @@ from pathlib import Path
 
 import numpy as np
 
-from ok import ConfigOption
+from ok import ConfigOption, get_path_relative_to_exe
 
-version = "v2.4.76"
+version = "v2.4.59.1"
 
 
 def calculate_pc_exe_path(running_path):
@@ -67,19 +67,13 @@ monthly_card_config_option = ConfigOption('Monthly Card Config', {
     'Monthly Card Time': 'Your computer\'s local time when the monthly card will popup, hour in (1-24)'
 })
 
-farm_task_config_option = ConfigOption('Farm Task Config', {
-    'Use Waveplate Crystal': True
-}, description='Daily, Simulation, Forgery, Tacet', config_description={
-    'Use Waveplate Crystal': 'Use Waveplate Crystal if insufficient'
-})
-
 config = {
     'debug': False,  # Optional, default: False
     'use_gui': True,
     'config_folder': 'configs',
     'screenshot_processor': make_bottom_right_black,
     'gui_icon': 'icon.png',
-    'global_configs': [key_config_option, pick_echo_config_option, monthly_card_config_option, farm_task_config_option],
+    'global_configs': [key_config_option, pick_echo_config_option, monthly_card_config_option],
     'ocr': {
         'lib': 'onnxocr',
         'params': {
@@ -159,9 +153,22 @@ config = {
     <p style="color:red;">
         <strong>使用本软件可能会导致账号被封。</strong> 请在了解风险后再使用。
     </p>
+    <br/>
+    <p style="color:orange;">
+    以上描述和链接均属于<strong>原版OK-WW</strong>和<strong>原作者ok-oldking</strong>。
+    </p>
+    <p style="color:orange;">
+    本软件为<strong>OK-WW-E</strong>，是基于OK-WW的增强版，开源地址为&nbsp; <a href="https://github.com/zzc-tongji/ok-wuthering-waves-enhanced">https://github.com/zzc-tongji/ok-wuthering-waves-enhanced</a>&nbsp; 。
+    </p>
+    <p style="color:orange;">
+    新增功能用⭐标出。版本号前三段表示基于OK-WW的版本。
+    </p>
+    <p style="color:orange;">
+    欢迎对于新增功能的issue和PR。喜欢本软件请支持原作者ok-oldking。
+    </p>
 """,
     'screenshots_folder': "screenshots",
-    'gui_title': 'OK-WW',  # Optional
+    'gui_title': 'OK-WW-E',  # Optional
     # 'coco_feature_folder': get_path(__file__, 'assets/coco_feature'),  # required if using feature detection
     'log_file': 'logs/ok-ww.log',  # Optional, auto rotating every day
     'error_log_file': 'logs/ok-ww_error.log',
@@ -169,9 +176,10 @@ config = {
     'launcher_error_log_file': 'logs/launcher_error.log',
     'version': version,
     'onetime_tasks': [  # tasks to execute
+        ["src.task.DailyTask2", "DailyTask2"],
+        ["src.task.TacetTask2", "TacetTask2"],
         ["src.task.DailyTask", "DailyTask"],
         ["src.task.FarmEchoTask", "FarmEchoTask"],
-        ["src.task.AutoRogueTask", "AutoRogueTask"],
         ["src.task.FiveToOneTask", "FiveToOneTask"],
         ["src.task.ForgeryTask", "ForgeryTask"],
         ["src.task.SimulationTask", "SimulationTask"],

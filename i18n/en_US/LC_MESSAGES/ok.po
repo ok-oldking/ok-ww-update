@@ -642,9 +642,6 @@ msgstr ""
 msgid "Which Tacet Suppression to Farm"
 msgstr ""
 
-msgid "Tacet Suppression Count"
-msgstr "Number of runs"
-
 msgid "back_up_stamina"
 msgstr ""
 
@@ -750,17 +747,53 @@ msgstr ""
 msgid "wait main"
 msgstr ""
 
-msgid "Simulation Challenge"
+msgid "Teleport Timeout"
 msgstr ""
 
-msgid "Farms the selected Simulation Challenge. Must be able to teleport (F2)."
-msgstr "Must be able to teleport to Gladiator's Portrait in Rinascita."
+msgid "the timeout of second for teleport"
+msgstr "the timeout of second for teleport, set larger number for low performance computer or HDD computer"
+
+msgid "⭐ Daily Task"
+msgstr ""
+
+msgid "open game, login, monthly card, mail, farm, activity, radio"
+msgstr "start, monthly card, mail, farm, activity (need 1+ tacet AND 180+ stamina, no error for unfinished), radio"
+
+msgid "Exit with Error"
+msgstr ""
+
+msgid "exit game and app with exception raised when option [Exit After Task] checked"
+msgstr ""
+
+msgid "⭐ Tacet Suppression"
+msgstr ""
+
+msgid "Farm selected Tacet Suppression, you need to be able to teleport"
+msgstr ""
+
+msgid "Tacet Suppression Serial Number"
+msgstr ""
+
+msgid "the Nth number in the list of Tacet Suppression list (in F2 menu)"
+msgstr ""
+
+msgid "Tacet Suppression Count"
+msgstr ""
+
+msgid "farm Tacet Suppression N time(s), 60 stamina per time, set a large number to use all stamina"
+msgstr ""
+
+msgid "⭐ Simulation Challenge"
+msgstr "Simulation Challenge"
+
+msgid "Farm selected Simulation Challenge, you need to be able to teleport"
+msgstr "you need to be able to teleport to Gladiator's Portrait in Rinascita"
 
 msgid "Material Selection"
-msgstr ""
+msgstr "Simulation Challenge Material Selection"
 
-msgid "Resonator EXP / Weapon EXP / Shell Credit"
-msgstr ""
+msgid "Resonator EXP / Weapon EXP / Shell Credit, on current screen of F2"
+msgstr "Resonator EXP / Weapon EXP / Shell Credit"
 
 msgid "Resonator EXP"
 msgstr ""
@@ -774,23 +807,23 @@ msgstr ""
 msgid "Simulation Challenge Count"
 msgstr ""
 
-msgid "Number of times to farm the Simulation Challenge (40 stamina per run). Set a large number to use all stamina."
+msgid "farm Simulation Challenge N time(s), 40 stamina per time, set a large number to use all stamina"
 msgstr ""
 
-msgid "Forgery Challenge"
+msgid "⭐ Forgery Challenge"
+msgstr "Forgery Challenge"
+
+msgid "Farm selected Forgery Challenge, you need to be able to teleport"
 msgstr ""
 
-msgid "Farms the selected Forgery Challenge. Must be able to teleport (F2)."
+msgid "Forgery Suppression Serial Number"
 msgstr ""
 
-msgid "Which Forgery Challenge to Farm"
-msgstr ""
-
-msgid "The Forgery Challenge number in the F2 list."
+msgid "the Nth number in the list of Forgery Suppression list (in F2 menu)"
 msgstr ""
 
 msgid "Forgery Challenge Count"
 msgstr ""
 
-msgid "Number of times to farm the Forgery Challenge (40 stamina per run). Set a large number to use all stamina."
+msgid "farm Forgery Challenge N time(s), 40 stamina per time, set a large number to use all stamina"
 msgstr ""

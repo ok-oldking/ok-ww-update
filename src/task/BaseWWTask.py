@@ -5,7 +5,7 @@ from datetime import datetime, timedelta
 
 import numpy as np
 
-from ok import BaseTask, Logger, find_boxes_by_name, og, find_color_rectangles, mask_white
+from ok import BaseTask, Logger, find_boxes_by_name, og, find_color_rectangles
 from ok import CannotFindException
 import cv2
 
@@ -27,7 +27,6 @@ class BaseWWTask(BaseTask):
         super().__init__(*args, **kwargs)
         self.pick_echo_config = self.get_global_config('Pick Echo Config')
         self.monthly_card_config = self.get_global_config('Monthly Card Config')
-        self.farm_task_config = self.get_global_config('Farm Task Config')
         self.next_monthly_card_start = 0
         self._logged_in = False
         self.bosses_pos = {
@@ -77,8 +76,6 @@ class BaseWWTask(BaseTask):
             processed_feature = True
             feature = self.get_feature_by_name('illusive_realm_exit')
             feature.mat = convert_bw(feature.mat)
-            feature = self.get_feature_by_name('purple_target_distance_icon')
-            feature.mat = binarize_for_matching(feature.mat)
 
     def zoom_map(self, esc=True):
         if not self.map_zoomed:
@@ -227,7 +224,7 @@ class BaseWWTask(BaseTask):
             self.sleep(0.01)
         return None
 
-    def walk_to_box(self, find_function, time_out=30, end_condition=None, y_offset=0.05, x_threshold=0.07):
+    def walk_to_box(self, find_function, time_out=30, end_condition=None, y_offset=0.05):
         if not find_function:
             self.log_info('find_function not found, break')
             return False
@@ -257,7 +254,7 @@ class BaseWWTask(BaseTask):
                 x, y = last_target.center()
                 y = max(0, y - self.height_of_screen(y_offset))
                 x_abs = abs(x - self.width_of_screen(0.5))
-                threshold = 0.04 if not last_direction else x_threshold
+                threshold = 0.04 if not last_direction else 0.07
                 centered = centered or x_abs <= self.width_of_screen(threshold)
                 if not centered:
                     if x > self.width_of_screen(0.5):
@@ -272,13 +269,13 @@ class BaseWWTask(BaseTask):
             if next_direction != last_direction:
                 if last_direction:
                     self.send_key_up(last_direction)
-                    self.sleep(0.001)
+                    self.sleep(0.01)
                 last_direction = next_direction
                 if next_direction:
                     self.send_key_down(next_direction)
         if last_direction:
             self.send_key_up(last_direction)
-            self.sleep(0.001)
+            self.sleep(0.01)
         if not end_condition:
             return last_direction is not None
         else:
@@ -362,25 +359,29 @@ class BaseWWTask(BaseTask):
     def in_illusive_realm(self):
         return self.find_one('new_realm_4') and self.in_realm() and self.find_one('illusive_realm_menu', threshold=0.6)
 
-    def walk_until_f(self, direction='w', time_out=1, raise_if_not_found=True, backward_time=0, target_text=None,
-                     check_combat=False):
+    def walk_until_f(self, direction='w', time_out=0, raise_if_not_found=True, backward_time=0, target_text=None,
+                     cancel=True):
         logger.info(f'walk_until_f direction {direction} target_text: {target_text}')
         if not self.find_f_with_text(target_text=target_text):
             # 视角朝前
             self.middle_click(after_sleep=0.2)
             if backward_time > 0:
                 if self.send_key_and_wait_f('s', raise_if_not_found, backward_time, target_text=target_text,
-                                            running=False, check_combat=check_combat):
+                                            running=False):
                     logger.info('walk backward found f')
                     return True
             if self.send_key_and_wait_f(direction, raise_if_not_found, time_out, target_text=target_text,
-                                        running=False, check_combat=check_combat):
+                                        running=False):
                 logger.info('walk forward found f')
                 self.sleep(0.5)
                 return True
             return False
         else:
-            return True
+            self.send_key('f')
+            if cancel and self.handle_claim_button():
+                return False
+        self.sleep(0.5)
+        return True
 
     def get_stamina(self):
         boxes = self.wait_ocr(0.49, 0.0, 0.92, 0.10, log=True, raise_if_not_found=False,
@@ -402,40 +403,18 @@ class BaseWWTask(BaseTask):
         self.info_set('back_up_stamina', back_up)
         return current, back_up
 
-    def use_stamina(self, once, max_count=100):
-        self.sleep(1)
-        texts = self.ocr(0.2, 0.56, 0.75, 0.69, match=[number_re])
-        min_stamina_box = self.find_boxes(texts, match=[re.compile(str(once))])
-        if not min_stamina_box:
-            min_stamina_box = self.box_of_screen(0.65, 0.61, 0.66, 0.62)  # 有双倍
-        min_stamina = once
-        if max_stamina_box := self.find_boxes(texts, match=[re.compile(str(once * 2))]):
-            max_stamina = once * 2
-        else:
-            max_stamina_box = min_stamina_box
-            max_stamina = once
-
-        max_stamina = min(max_stamina, max_count * once)
-
+    def ensure_stamina(self, min_stamina, max_stamina):
         current, back_up = self.get_stamina()
-        if not self.farm_task_config.get('Use Waveplate Crystal'):
-            back_up = 0
         if current >= max_stamina:
-            self.click(max_stamina_box, after_sleep=1)
             return max_stamina, current + back_up - max_stamina, current - max_stamina, False
         elif current + back_up >= max_stamina:
             self.add_stamina(max_stamina - current)
-            self.click(max_stamina_box, after_sleep=1)
             return max_stamina, current + back_up - max_stamina, 0, True
         elif current >= min_stamina:
-            self.click(min_stamina_box, after_sleep=1)
             return min_stamina, current + back_up - min_stamina, current - min_stamina, False
         elif current + back_up >= min_stamina:
             self.add_stamina(min_stamina - current)
-            self.click(min_stamina_box, after_sleep=1)
             return min_stamina, current + back_up - min_stamina, 0, True
-        else:
-            return 0, 0, 0, True
 
     def add_stamina(self, to_add):
         self.click(0.83, 0.05, after_sleep=1)
@@ -445,38 +424,48 @@ class BaseWWTask(BaseTask):
             self.wait_ocr(0.6, 0.53, 0.66, 0.62, match=number_re, raise_if_not_found=True)[0].name)
         to_minus = back_up - to_add
         self.log_info(f'add_stamina, to_minus:{to_minus}, to_add:{to_add}, back_up:{back_up}')
-
-        for _ in range(abs(to_minus)):
-            if to_minus > 0:
-                self.click(0.24, 0.58, after_sleep=0.01)  # -
-            else:
-                self.click(0.69, 0.58, after_sleep=0.01)  # +
+        for _ in range(to_minus):
+            self.click(0.24, 0.58, after_sleep=0.01)
         self.click_relative(0.69, 0.71, after_sleep=2)
         self.info_set('add_stamina', to_add)
         self.back(after_sleep=1)
         self.back(after_sleep=1)
 
     def send_key_and_wait_f(self, direction, raise_if_not_found, time_out, running=False, target_text=None,
-                            check_combat=False):
+                            cancel=True):
         if time_out <= 0:
             return
-        self.send_key_down(direction)
+        start = time.time()
         if running:
             self.mouse_down(key='right')
+        self.send_key_down(direction)
+        f_found = self.wait_until(lambda: self.find_f_with_text(target_text=target_text), time_out=time_out,
+                                  raise_if_not_found=False)
+        if f_found:
+            self.send_key('f')
             self.sleep(0.1)
+        self.send_key_up(direction)
         if running:
             self.mouse_up(key='right')
-        f_found = self.wait_until(
-            lambda: self.find_f_with_text(target_text=target_text) or (check_combat and self.in_combat()),
-            time_out=time_out,
-            raise_if_not_found=False)
-        self.send_key_up(direction)
         if not f_found:
             if raise_if_not_found:
                 raise CannotFindException('cant find the f to enter')
             else:
                 logger.warning(f"can't find the f to enter")
                 return False
+
+        remaining = time.time() - start
+
+        if cancel and self.handle_claim_button():
+            self.sleep(0.5)
+            self.send_key_down(direction)
+            if running:
+                self.mouse_down(key='right')
+            self.sleep(remaining + 0.2)
+            if running:
+                self.mouse_up(key='right')
+            self.send_key_up(direction)
+            return False
         return f_found
 
     def run_until(self, condiction, direction, time_out, raise_if_not_found=False, running=False):
@@ -484,15 +473,15 @@ class BaseWWTask(BaseTask):
             return
         self.send_key_down(direction)
         if running:
-            self.sleep(0.1)
+            self.sleep(0.5)
             logger.debug(f'run_until condiction {condiction} direction {direction}')
             self.mouse_down(key='right')
-            self.sleep(0.1)
-            self.mouse_up(key='right')
+        self.sleep(1)
         result = self.wait_until(condiction, time_out=time_out,
                                  raise_if_not_found=raise_if_not_found)
         self.send_key_up(direction)
-
+        if running:
+            self.mouse_up(key='right')
         return result
 
     def is_moving(self):
@@ -569,7 +558,7 @@ class BaseWWTask(BaseTask):
 
     def pick_f(self, handle_claim=True):
         if self.find_one('pick_up_f_hcenter_vcenter', box=self.f_search_box, threshold=0.8):
-            self.send_key('f', after_sleep=0.8)
+            self.send_key('f')
             if not handle_claim:
                 return True
             if not self.handle_claim_button():
@@ -582,7 +571,7 @@ class BaseWWTask(BaseTask):
         if self.find_treasure_icon():
             self.walk_to_box(self.find_treasure_icon, end_condition=self.find_f_with_text)
         if send_f:
-            self.walk_until_f(time_out=2, backward_time=0, raise_if_not_found=raise_if_not_found)
+            self.walk_until_f(time_out=2, backward_time=0, raise_if_not_found=raise_if_not_found, cancel=False)
         self.sleep(1)
         if self.find_treasure_icon():
             self.log_info('retry walk_to_treasure')
@@ -637,9 +626,9 @@ class BaseWWTask(BaseTask):
 
     def walk_find_echo(self, backward_time=1, time_out=3):
         if self.walk_until_f(time_out=time_out, backward_time=backward_time, target_text=self.absorb_echo_text(),
-                             raise_if_not_found=False, check_combat=True):  # find and pick echo
+                             raise_if_not_found=False):  # find and pick echo
             logger.debug(f'farm echo found echo move forward walk_until_f to find echo')
-            return self.pick_echo()
+            return True
 
     def incr_drop(self, dropped):
         if dropped:
@@ -996,7 +985,7 @@ class BaseWWTask(BaseTask):
             y = 0.28
             height = (0.85 - 0.28) / 4
             y += height * index
-            self.click_relative(x, y, after_sleep=1)
+            self.click_relative(x, y, after_sleep=2)
         else:
             min_width = self.width_of_screen(475 / 2560)
             min_height = self.height_of_screen(40 / 1440)
@@ -1013,9 +1002,11 @@ class BaseWWTask(BaseTask):
             btns = self.find_feature('boss_proceed', box=self.box_of_screen(0.94, 0.6, 0.97, 0.88), threshold=0.8)
             if btns is None:
                 raise Exception("can't find boss_proceed")
-            bottom_btn = max(btns, key=lambda box: box.y)
-            self.click_box(bottom_btn, after_sleep=1)
-        self.wait_feature(['fast_travel_custom', 'gray_teleport', 'remove_custom'], time_out=10, settle_time=0.5)
+            bottom_btn = None
+            for btn in btns:
+                if bottom_btn is None or btn.y > bottom_btn.y:
+                    bottom_btn = btn
+            self.click_box(bottom_btn, after_sleep=2)
 
     def change_time_to_night(self):
         logger.info('change time to night')
@@ -1118,29 +1109,3 @@ def convert_bw(cv_image):
     output_image[match_mask == 255] = [255, 255, 255]
 
     return output_image
-
-
-def binarize_for_matching(image):
-    """
-    Converts a colored image to a binary image based on a brightness threshold.
-
-    The rule is: pixels with a value of 240-255 become pure white (255),
-    and all other pixels become pure black (0).
-
-    Args:
-        image (np.array): The input BGR image from OpenCV.
-
-    Returns:
-        np.array: The resulting binary image (single channel, 8-bit).
-    """
-    # Convert the image to grayscale for a single brightness value per pixel.
-    # This is more robust than checking individual R, G, B channels.
-    gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-
-    # Apply the binary threshold.
-    # Pixels > 239 will be set to 255 (white).
-    # Pixels <= 239 will be set to 0 (black).
-    # cv2.THRESH_BINARY is the type of thresholding we want.
-    _, binary_image = cv2.threshold(gray_image, 244, 255, cv2.THRESH_BINARY)
-
-    return binary_image
