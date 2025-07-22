@@ -5,7 +5,7 @@ import numpy as np
 
 from ok import ConfigOption
 
-version = "v2.4.80"
+version = "v2.4.81"
 
 
 def calculate_pc_exe_path(running_path):
