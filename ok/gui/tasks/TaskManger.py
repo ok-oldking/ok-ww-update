@@ -9,7 +9,7 @@ logger = Logger.get_logger(__name__)
 
 
 class TaskManager:
-    def __init__(self, task_executor, trigger_tasks=[], onetime_tasks=[],scene=None):
+    def __init__(self, task_executor, trigger_tasks=[], onetime_tasks=[], scene=None):
         self.task_executor = task_executor
         self.task_folder = os.path.join("user_scripts", "tasks")
         self.has_custom = os.path.exists(self.task_folder)
@@ -18,6 +18,10 @@ class TaskManager:
         self.scene = init_class_by_name(scene[0], scene[1]) if scene else None
         self.task_executor.trigger_tasks = self.init_tasks(trigger_tasks)
         self.task_executor.onetime_tasks = self.init_tasks(onetime_tasks)
+        for task in self.task_executor.trigger_tasks:
+            task.post_init()
+        for task in self.task_executor.onetime_tasks:
+            task.post_init()
         self.task_executor.scene = self.scene
         self.load_user_tasks()
 

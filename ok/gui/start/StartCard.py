@@ -1,11 +1,13 @@
+import os
+import subprocess
+import zipfile
 from ctypes import windll, wintypes
+from pathlib import Path
 
 from PySide6.QtCore import Qt, Signal
+from PySide6.QtWidgets import QHBoxLayout, QWidget
 from _ctypes import byref
 from qfluentwidgets import FluentIcon, SettingCard, PushButton
-import zipfile
-import subprocess
-from pathlib import Path
 
 from ok import Handler
 from ok import Logger
@@ -21,28 +23,39 @@ class StartCard(SettingCard):
     show_choose_hwnd = Signal()
 
     def __init__(self, exit_event):
-        super().__init__(FluentIcon.PLAY, f'{self.tr("Start")} {og.app.title}', og.app.title)
+        super().__init__(og.config.get('gui_icon'), og.app.title, og.app.version)
+
+        # while (item := self.hBoxLayout.takeAt(0)) is not None:
+        #     if item.widget() and item.widget():
+        #         item.widget().setParent(None)
+        # self.hBoxLayout.setSpacing(8)
+        self.iconLabel.setFixedSize(30, 30)
+        # self.hBoxLayout.addWidget(self.iconLabel)
         self.hBoxLayout.setAlignment(Qt.AlignVCenter)
         self.status_bar = StatusBar("test")
         self.status_bar.clicked.connect(self.status_clicked)
 
-        self.hBoxLayout.addWidget(self.status_bar, 0, Qt.AlignRight)
-        self.hBoxLayout.addSpacing(16)
+        self.hBoxLayout.addWidget(self.status_bar, 0, Qt.AlignLeft)
+        self.hBoxLayout.addSpacing(6)
+
+        self.open_install_folder_button = PushButton(FluentIcon.FOLDER, self.tr("Install Folder"), self)
+        self.hBoxLayout.addWidget(self.open_install_folder_button, 0, Qt.AlignRight)
+        self.open_install_folder_button.clicked.connect(self.open_install_folder)
+        self.hBoxLayout.addSpacing(6)
 
         self.export_log_button = PushButton(FluentIcon.FEEDBACK, self.tr("Export Logs"), self)
         self.hBoxLayout.addWidget(self.export_log_button, 0, Qt.AlignRight)
         self.export_log_button.clicked.connect(self.export_logs)
-        self.hBoxLayout.addSpacing(16)
+        self.hBoxLayout.addSpacing(6)
 
-        self.capture_button = PushButton(FluentIcon.ZOOM, self.tr("Test Capture"), self)
+        self.capture_button = PushButton(FluentIcon.ZOOM, self.tr("Capture"), self)
         self.hBoxLayout.addWidget(self.capture_button, 0, Qt.AlignRight)
         self.capture_button.clicked.connect(self.capture)
-
-        self.hBoxLayout.addSpacing(16)
+        self.hBoxLayout.addSpacing(6)
 
         self.start_button = PushButton(FluentIcon.PLAY, self.tr("Start"), self)
         self.hBoxLayout.addWidget(self.start_button, 0, Qt.AlignRight)
-        self.hBoxLayout.addSpacing(16)
+        self.hBoxLayout.addSpacing(6)
         self.update_status()
         self.start_button.clicked.connect(self.clicked)
         communicate.executor_paused.connect(self.update_status)
@@ -67,11 +80,17 @@ class StartCard(SettingCard):
                 communicate.tab.emit("start")
             self.status_bar.show()
 
-    def clicked(self):
+    @staticmethod
+    def clicked():
         if not og.executor.paused:
             og.executor.pause()
         else:
             og.app.start_controller.start()
+
+    @staticmethod
+    def open_install_folder():
+        cwd = os.getcwd()
+        subprocess.Popen(f'explorer "{cwd}"')
 
     @staticmethod
     def export_logs():
