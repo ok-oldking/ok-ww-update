@@ -5,7 +5,7 @@ import numpy as np
 
 from ok import ConfigOption
 
-version = "v2.4.84"
+version = "v2.5.1"
 
 
 def calculate_pc_exe_path(running_path):
@@ -140,7 +140,7 @@ config = {
             'discord': 'https://discord.gg/vVyCatEBgA',
             'sponsor': 'https://afdian.com/a/ok-oldking',
             'share': 'OK-WW 夸克网盘下载：https://pan.quark.cn/s/75b55ef72a34 GitHub下载: https://github.com/ok-oldking/ok-wuthering-waves/releases/latest',
-            'faq': 'https://cnb.cool/ok-oldking/ok-wuthering-waves/-/blob/master/README.md',
+            'faq': 'https://cnb.cool/ok-oldking/ok-wuthering-waves/-/blob/main/README.md',
         },
     },
     'about': """
