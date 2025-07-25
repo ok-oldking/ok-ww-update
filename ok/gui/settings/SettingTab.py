@@ -23,7 +23,7 @@ class SettingTab(Tab):
             FIF.LANGUAGE,
             self.tr('Language'),
             self.tr('Set your preferred language'),
-            texts=['简体中文', 'English', self.tr('Use system setting')],
+            texts=['简体中文', '繁體中文', 'English', "Español", "日本語", "한국인", self.tr('Use system setting')],
             parent=self.basic_group
         )
         self.config_groups = []

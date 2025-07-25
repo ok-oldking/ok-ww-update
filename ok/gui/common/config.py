@@ -13,8 +13,12 @@ from ok import get_relative_path
 class Language(Enum):
     """ Language enumeration """
 
-    CHINESE_SIMPLIFIED = QLocale(QLocale.Chinese, QLocale.China)
+    CHINESE_SIMPLIFIED = QLocale(QLocale.Chinese, QLocale.SimplifiedChineseScript)
+    CHINESE_TRADITIONAL = QLocale(QLocale.Chinese, QLocale.TraditionalChineseScript)
     ENGLISH = QLocale(QLocale.English)
+    SPANISH = QLocale(QLocale.Spanish)
+    JAPANESE = QLocale(QLocale.Japanese)
+    KOREAN = QLocale(QLocale.Korean)
     AUTO = QLocale()
 
 

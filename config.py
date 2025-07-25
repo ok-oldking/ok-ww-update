@@ -5,7 +5,7 @@ import numpy as np
 
 from ok import ConfigOption
 
-version = "v2.5.1"
+version = "v2.5.2"
 
 
 def calculate_pc_exe_path(running_path):
@@ -107,9 +107,9 @@ config = {
         'report_url': 'http://report.ok-script.cn:8080/report',
     },
     'window_size': {
-        'width': 820,
+        'width': 900,
         'height': 600,
-        'min_width': 820,
+        'min_width': 900,
         'min_height': 600,
     },
     'supported_resolution': {

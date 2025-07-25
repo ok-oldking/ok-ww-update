@@ -3,7 +3,7 @@ import glob
 import hashlib
 import os.path
 
-from ok import Logger, BaseTask, TriggerTask
+from ok import Logger, BaseTask, TriggerTask, og
 
 logger = Logger.get_logger(__name__)
 
@@ -30,9 +30,11 @@ class TaskManager:
         from ok import init_class_by_name
         for task_class in task_classes:
             task = init_class_by_name(task_class[0], task_class[1], executor=self.task_executor)
-            task.set_executor(self)
-            task.scene = self.scene
-            tasks.append(task)
+            from ok.gui.common.config import cfg
+            if len(task.supported_languages) == 0 or cfg.get(cfg.language).value.name() in task.supported_languages:
+                task.set_executor(self)
+                task.scene = self.scene
+                tasks.append(task)
         return tasks
 
     def is_custom(self, task):
