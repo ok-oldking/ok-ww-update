@@ -6,6 +6,7 @@ from qfluentwidgets import FluentIcon, PushButton, BodyLabel
 from ok.gui.common.OKIcon import OKIcon
 from ok.gui.util.Alert import alert_info
 
+
 class LinksBar(QWidget):
 
     def __init__(self, app_config):
@@ -19,12 +20,10 @@ class LinksBar(QWidget):
         self.version_label = BodyLabel()
         self.layout.addWidget(self.version_label)
         github_url = self.get_url('github')
-        if not github_url or 'oldking' not in github_url:
-            github_url = 'https://github.com/ok-oldking/ok-wuthering-waves'
-
-        self.github_button = PushButton(self.tr("GitHub"), icon=FluentIcon.GITHUB)
-        self.github_button.clicked.connect(lambda: QDesktopServices.openUrl(QUrl(github_url)))
-        self.layout.addWidget(self.github_button, alignment=Qt.AlignRight, stretch=0)
+        if github_url:
+            self.github_button = PushButton(self.tr("GitHub"), icon=FluentIcon.GITHUB)
+            self.github_button.clicked.connect(lambda: QDesktopServices.openUrl(QUrl(github_url)))
+            self.layout.addWidget(self.github_button, alignment=Qt.AlignRight, stretch=0)
 
         if self.get_url('discord'):
             self.discord_button = PushButton(self.tr("Discord"), icon=OKIcon.DISCORD)
