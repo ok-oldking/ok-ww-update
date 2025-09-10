@@ -1,9 +1,8 @@
-import os
-
-from PySide6.QtCore import Qt, QRectF
-from PySide6.QtGui import QPixmap, QPainter, QPainterPath
+from PySide6.QtCore import QRectF
+from PySide6.QtGui import QPainter, QPixmap, QPainterPath, Qt
 from PySide6.QtWidgets import QWidget
 
+import os
 from ok import og
 
 
@@ -12,9 +11,6 @@ class ImageWidget(QWidget):
 
     def __init__(self, image_path, parent=None):
         super().__init__(parent)
-        self.set_image_path(image_path)
-
-    def set_image_path(self, image_path):
         if image_path in self.cache:
             self.image = self.cache[image_path]
         else:
@@ -25,13 +21,12 @@ class ImageWidget(QWidget):
             self.cache[image_path] = self.image
 
         self.setFixedSize(self.image.size())
-        self.update()
 
     def paintEvent(self, event):
         painter = QPainter(self)
         path = QPainterPath()
         rect = QRectF(self.rect())
-        radius = round(self.image.width() / 6)
+        radius = round(self.image.width() / 6)  # Adjust the radius for rounded corners
         path.addRoundedRect(rect, radius, radius)
         painter.setClipPath(path)
         painter.drawPixmap(0, 0, self.image)

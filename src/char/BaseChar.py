@@ -18,8 +18,8 @@ class Priority(IntEnum):
     CURRENT_CHAR = -100  # 当前角色
     CURRENT_CHAR_PLUS = CURRENT_CHAR + 1  # 当前角色稍高优先级 (特殊情况)
     SKILL_AVAILABLE = 100  # 有可用技能
-    BASE_MINUS_1 = -1
-    BASE = 0
+    ALL_IN_CD = 0  # 所有技能冷却中
+    NORMAL = 10  # 普通优先级
     MAX = 9999999999  # 最高优先级
     FAST_SWITCH = MAX - 100  # 快速切换优先级 (例如应对特殊机制)
 
@@ -296,7 +296,7 @@ class BaseChar:
             self.check_combat()
             now = time.time()
             current_resonance = self.current_resonance()
-            if not self.resonance_available() and (
+            if not self.resonance_available(current_resonance, check_cd=check_cd) and (
                     not has_animation or now - start > animation_min_duration):
                 self.logger.debug(f'click_resonance not available break')
                 break
@@ -307,7 +307,7 @@ class BaseChar:
                     self.task.click()
                     last_op = 'click'
                     continue
-                if current_resonance > 0 and self.resonance_available():
+                if current_resonance > 0 and self.resonance_available(current_resonance):
                     if resonance_click_time == 0:
                         clicked = True
                         resonance_click_time = now
@@ -476,39 +476,38 @@ class BaseChar:
         start = time.time()
         last_click = 0
         clicked = False
-        if not self.task.in_liberation:
-            while self.liberation_available():  # clicked and still in team wait for animation
-                self.logger.debug(f'click_liberation liberation_available click')
-                if send_click:
-                    self.click(interval=0.1)
-                now = time.time()
-                if now - last_click > 0.1:
-                    self.send_liberation_key()
-                    if not clicked:
-                        clicked = True
-                    last_click = now
-                if time.time() - start > SKILL_TIME_OUT:
-                    self.alert_skill_failed()
-                    self.task.raise_not_in_combat('too long clicking a liberation')
-                self.task.next_frame()
-            if clicked:
-                if self.task.wait_until(lambda: not self.task.in_team()[0], time_out=0.4,
-                                        post_action=self.click_with_interval):
+        while self.liberation_available():  # clicked and still in team wait for animation
+            self.logger.debug(f'click_liberation liberation_available click')
+            if send_click:
+                self.click(interval=0.1)
+            now = time.time()
+            if now - last_click > 0.1:
+                self.send_liberation_key()
+                if not clicked:
+                    clicked = True
+                last_click = now
+            if time.time() - start > SKILL_TIME_OUT:
+                self.alert_skill_failed()
+                self.task.raise_not_in_combat('too long clicking a liberation')
+            self.task.next_frame()
+        if clicked:
+            if self.task.wait_until(lambda: not self.task.in_team()[0], time_out=0.4,
+                                    post_action=self.click_with_interval):
+                self.task.in_liberation = True
+                self.logger.debug(f'not in_team successfully casted liberation')
+            else:
+                self.task.in_liberation = False
+                self.logger.error(f'clicked liberation but no effect')
+                return False
+        else:
+            start = time.time()
+            while not self.has_cd('liberation') and time.time() - start < wait_if_cd_ready:
+                self.send_liberation_key(after_sleep=0.05)
+                if self.task.wait_until(lambda: not self.task.in_team()[0], time_out=0.1):
                     self.task.in_liberation = True
                     self.logger.debug(f'not in_team successfully casted liberation')
-                else:
-                    self.task.in_liberation = False
-                    self.logger.error(f'clicked liberation but no effect')
-                    return False
-            else:
-                start = time.time()
-                while not self.has_cd('liberation') and time.time() - start < wait_if_cd_ready:
-                    self.send_liberation_key(after_sleep=0.05)
-                    if self.task.wait_until(lambda: not self.task.in_team()[0], time_out=0.1):
-                        self.task.in_liberation = True
-                        self.logger.debug(f'not in_team successfully casted liberation')
-                if not self.task.in_liberation:
-                    return False
+            if not self.task.in_liberation:
+                return False
         start = time.time()
         while not self.task.in_team()[0]:
             self.task.in_liberation = True
@@ -585,7 +584,7 @@ class BaseChar:
         Returns:
             int: 基础优先级数值。
         """
-        priority = Priority.BASE
+        priority = 0
         if self.count_liberation_priority() and self.liberation_available():
             priority += self.count_liberation_priority()
         if self.count_resonance_priority() and self.resonance_available():
@@ -619,7 +618,7 @@ class BaseChar:
         """计算共鸣回路技能对切换优先级的贡献值。"""
         return 0
 
-    def resonance_available(self):
+    def resonance_available(self, current=None, check_ready=False, check_cd=False):
         """判断共鸣技能是否可用。
 
         Args:

@@ -51,7 +51,7 @@
 
 有问题点这里, 挨个检查再提问:
 
-1. **安装:** 安装到仅包含英文字符的目录中, 不能安装到Program Files目录下。
+1. **解压问题:** 将压缩包解压到仅包含英文字符的目录中。
 2. **杀毒软件干扰:** 将下载和解压目录添加到您的杀毒软件/Windows Defender 白名单中。
 3. **显示设置:** 关闭显卡滤镜和锐化。使用默认游戏亮度并禁用在游戏上显示FPS(如小飞机)。
 4. **自定义按键绑定:** 如没有使用默认按键，请在APP设置中设置, 不在设置里的按键不支持。
@@ -70,15 +70,6 @@ pip install -r requirements.txt --upgrade #install python dependencies, 更新�
 python main.py # run the release version
 python main_debug.py # run the debug version
 ```
-
-### 命令行参数
-
-```
-ok-ww.exe -t 1 -e
-```
-
-- -t 或 --task 代表启动后自动执行第几个任务, 1就是第一个, 一条龙任务
-- -e 或 --exit 加上代表如果执行完任务之后自动退出
 
 ### 加入我们
 

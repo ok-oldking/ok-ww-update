@@ -1,4 +1,3 @@
-from src.char.Augusta import Augusta
 from src.char.Baizhi import Baizhi
 from src.char.BaseChar import BaseChar, Elements
 from src.char.Brant import Brant
@@ -73,8 +72,6 @@ char_dict = {
                   'ring_index': Elements.FIRE},
     'char_phrolova': {'cls': Phrolova, 'res_cd': 12, 'echo_cd': 25, 'liberation_cd': 20,
                       'ring_index': Elements.HAVOC},
-    'Augusta': {'cls': Augusta, 'res_cd': 15, 'echo_cd': 25, 'liberation_cd': 25,
-                'ring_index': Elements.ELECTRIC},
 }
 
 char_names = char_dict.keys()

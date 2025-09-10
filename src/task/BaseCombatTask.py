@@ -55,6 +55,7 @@ class BaseCombatTask(CombatCheck):
         super().__init__(*args, **kwargs)
         self.chars = [None, None, None]  # 角色列表
         self.char_texts = ['char_1_text', 'char_2_text', 'char_3_text']  # 角色文本标识符列表
+        self.key_config = self.get_global_config('Game Hotkey Config')  # 游戏热键配置
         self.mouse_pos = None  # 当前鼠标位置
         self.combat_start = 0  # 战斗开始时间戳
 
@@ -174,20 +175,16 @@ class BaseCombatTask(CombatCheck):
         self.cd_refreshed = False
         super().sleep(*args, **kwargs)
 
-    def revive_action(self):
-        pass
-
-    def teleport_to_heal(self, esc=True):
+    def teleport_to_heal(self):
         """传送回城治疗。"""
-        if esc:
-            self.sleep(1)
-            self.info['Death Count'] = self.info.get('Death Count', 0) + 1
-            self.send_key('esc', after_sleep=2)
+        self.sleep(1)
+        self.info['Death Count'] = self.info.get('Death Count', 0) + 1
+        self.send_key('esc', after_sleep=2)
         self.log_info('click m to open the map')
         self.send_key('m', after_sleep=2)
 
         teleport = self.find_best_match_in_box(self.box_of_screen(0.1, 0.1, 0.9, 0.9),
-                                               ['map_way_point', 'map_way_point_big'], 0.7)
+                                               ['map_way_point', 'map_way_point_big'], 0.8)
         if not teleport:
             raise RuntimeError(f'Can not find a teleport to heal')
         self.click(teleport, after_sleep=1)
@@ -354,8 +351,7 @@ class BaseCombatTask(CombatCheck):
                 confirm = self.wait_feature('revive_confirm_hcenter_vcenter', threshold=0.8, time_out=2)
                 if confirm:
                     self.log_info(f'char dead')
-                    if not self.revive_action():
-                        self.raise_not_in_combat(f'char dead', exception_type=CharDeadException)
+                    self.raise_not_in_combat(f'char dead', exception_type=CharDeadException)
                 if now - start > self.switch_char_time_out:
                     self.raise_not_in_combat(
                         f'switch too long failed chars_{current_char}_to_{switch_to}, {now - start}')
@@ -536,8 +532,8 @@ class BaseCombatTask(CombatCheck):
                 else:
                     char.is_current_char = False
         self.combat_start = time.time()
-        if len(self.chars) >= 2:
-            return True
+
+        # self.log_info(f'load chars success {self.chars} {[obj.confidence for obj in self.chars]}')
 
     @staticmethod
     def should_update(the_char, old_char):
