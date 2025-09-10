@@ -27,6 +27,7 @@ class BaseWWTask(BaseTask):
         super().__init__(*args, **kwargs)
         self.pick_echo_config = self.get_global_config('Pick Echo Config')
         self.monthly_card_config = self.get_global_config('Monthly Card Config')
+        self.key_config = self.get_global_config('Game Hotkey Config')  # 游戏热键配置
         self.next_monthly_card_start = 0
         self._logged_in = False
 
@@ -94,7 +95,7 @@ class BaseWWTask(BaseTask):
         f_search_box = self.get_box_by_name('pick_up_f_hcenter_vcenter')
         f_search_box = f_search_box.copy(x_offset=-f_search_box.width * 0.3,
                                          width_offset=f_search_box.width * 0.65,
-                                         height_offset=f_search_box.height * 6,
+                                         height_offset=f_search_box.height * 6.5,
                                          y_offset=-f_search_box.height * 5,
                                          name='search_dialog')
         return f_search_box
@@ -126,7 +127,6 @@ class BaseWWTask(BaseTask):
                 if text[0].y > search_text_box.y + f.height * 1:
                     logger.debug(f'found f with text {text} below, target_text {target_text}')
                     self.scroll_relative(0.5, 0.5, 1)
-                    self.sleep(0.02)
                 return f
         else:
             return f
@@ -188,13 +188,15 @@ class BaseWWTask(BaseTask):
             self.sleep(0.01)
         return None
 
-    def walk_to_box(self, find_function, time_out=30, end_condition=None, y_offset=0.05, x_threshold=0.07):
+    def walk_to_box(self, find_function, time_out=30, end_condition=None, y_offset=0.05, x_threshold=0.07,
+                    use_hook=False):
         if not find_function:
             self.log_info('find_function not found, break')
             return False
         last_direction = None
         start = time.time()
         ended = False
+        running = False
         last_target = None
         centered = False
         while time.time() - start < time_out:
@@ -237,9 +239,26 @@ class BaseWWTask(BaseTask):
                 last_direction = next_direction
                 if next_direction:
                     self.send_key_down(next_direction)
+            if running:
+                if not self.find_one('on_the_wall', threshold=0.7):
+                    self.log_info('not on the wall, stop running')
+                    self.mouse_up(key='right')
+            else:
+                if next_direction == 'w' and self.find_one('on_the_wall', threshold=0.7):
+                    self.log_info('on the wall, start running')
+                    running = True
+                    self.mouse_down(key='right')
+                    self.sleep(0.1)
+            if use_hook and next_direction == 'w':
+                if self.find_one('tool_teleport', 0.75):
+                    self.send_key(self.key_config['Tool Key'])
+                    self.sleep(3)
+                    continue
         if last_direction:
             self.send_key_up(last_direction)
             self.sleep(0.001)
+        if running:
+            self.send_key_up('shift')
         if not end_condition:
             return last_direction is not None
         else:
@@ -317,8 +336,9 @@ class BaseWWTask(BaseTask):
         return 0
 
     def in_realm(self):
-        return not self.config.get("Don't restart in Realm") and self.find_one('illusive_realm_exit', threshold=0.8,
-                                                                               frame_processor=convert_bw)
+        return not bool(getattr(self, 'treat_as_not_in_realm', False)) and self.find_one('illusive_realm_exit',
+                                                                                         threshold=0.8,
+                                                                                         frame_processor=convert_bw)
 
     def in_world(self):
         return self.find_one('world_earth_icon', threshold=0.8, frame_processor=binarize_for_matching)
@@ -327,18 +347,18 @@ class BaseWWTask(BaseTask):
         return self.find_one('new_realm_4') and self.in_realm() and self.find_one('illusive_realm_menu', threshold=0.6)
 
     def walk_until_f(self, direction='w', time_out=1, raise_if_not_found=True, backward_time=0, target_text=None,
-                     check_combat=False):
+                     check_combat=False, running=False):
         logger.info(f'walk_until_f direction {direction} target_text: {target_text}')
         if not self.find_f_with_text(target_text=target_text):
             # 视角朝前
             self.middle_click(after_sleep=0.2)
             if backward_time > 0:
                 if self.send_key_and_wait_f('s', raise_if_not_found, backward_time, target_text=target_text,
-                                            running=False, check_combat=check_combat):
+                                            running=running, check_combat=check_combat):
                     logger.info('walk backward found f')
                     return True
             if self.send_key_and_wait_f(direction, raise_if_not_found, time_out, target_text=target_text,
-                                        running=False, check_combat=check_combat):
+                                        running=running, check_combat=check_combat):
                 logger.info('walk forward found f')
                 return True
             return False
@@ -348,9 +368,9 @@ class BaseWWTask(BaseTask):
     def get_stamina(self):
         boxes = self.wait_ocr(0.49, 0.0, 0.92, 0.10, log=True, raise_if_not_found=False,
                               match=[number_re, stamina_re])
-        if len(boxes) == 0:
+        if not boxes:
             self.screenshot('stamina_error')
-            return -1, -1
+            return -1, -1, -1
         current_box = find_boxes_by_name(boxes, stamina_re)
         if current_box:
             current = int(current_box[0].name.split('/')[0])
@@ -415,15 +435,16 @@ class BaseWWTask(BaseTask):
             return
         self.send_key_down(direction)
         if running:
-            self.mouse_down(key='right')
             self.sleep(0.1)
-        if running:
-            self.mouse_up(key='right')
+            self.mouse_down(key='right')
         f_found = self.wait_until(
             lambda: self.find_f_with_text(target_text=target_text) or (check_combat and self.in_combat()),
             time_out=time_out,
             raise_if_not_found=False)
         self.send_key_up(direction)
+        if running:
+            self.sleep(0.1)
+            self.mouse_up(key='right')
         if not f_found:
             if raise_if_not_found:
                 raise CannotFindException('cant find the f to enter')
@@ -440,11 +461,12 @@ class BaseWWTask(BaseTask):
             self.sleep(0.1)
             logger.debug(f'run_until condiction {condiction} direction {direction}')
             self.mouse_down(key='right')
-            self.sleep(0.1)
-            self.mouse_up(key='right')
         result = self.wait_until(condiction, time_out=time_out,
                                  raise_if_not_found=raise_if_not_found)
         self.send_key_up(direction)
+        if running:
+            self.sleep(0.1)
+            self.mouse_up(key='right')
 
         return result
 
