@@ -27,6 +27,7 @@ class BaseWWTask(BaseTask):
         super().__init__(*args, **kwargs)
         self.pick_echo_config = self.get_global_config('Pick Echo Config')
         self.monthly_card_config = self.get_global_config('Monthly Card Config')
+        self.char_config = self.get_global_config('Character Config')
         self.key_config = self.get_global_config('Game Hotkey Config')  # 游戏热键配置
         self.next_monthly_card_start = 0
         self._logged_in = False
@@ -407,14 +408,13 @@ class BaseWWTask(BaseTask):
                 logger.info(f"使用单倍体力")
                 used = once
                 x = 0.32
-        self.click(x, y)
+        self.click(x, y, after_sleep=0.5)
         if self.wait_feature('gem_add_stamina', horizontal_variance=0.4, vertical_variance=0.05,
                              time_out=1):  # 看是否需要使用备用体力
             self.click(0.70, 0.71, after_sleep=0.5)  # 点击确认
             self.click(0.70, 0.71, after_sleep=1)
             self.back(after_sleep=0.5)
-            self.back(after_sleep=0.5)
-            self.click(x, y)
+            self.click(x, y, after_sleep=0.5)
 
         current -= used
         must_use -= used
