@@ -229,7 +229,13 @@ class BaseWWTask(BaseTask):
                     else:
                         next_direction = 'a'
                 else:
-                    if y > self.height_of_screen(0.5):
+                    if last_direction == 's':
+                        center = 0.45
+                    elif last_direction == 'w':
+                        center = 0.6
+                    else:
+                        center = 0.5
+                    if y > self.height_of_screen(center):
                         next_direction = 's'
                     else:
                         next_direction = 'w'
@@ -891,10 +897,13 @@ class BaseWWTask(BaseTask):
                 self.sleep(0.5)
                 self.click(feature, after_sleep=1)
                 if feature.name == 'fast_travel_custom':
-                    if self.wait_click_feature(['confirm_btn_hcenter_vcenter', 'confirm_btn_highlight_hcenter_vcenter'],
-                                               relative_x=-1, raise_if_not_found=False,
-                                               threshold=0.6,
-                                               time_out=2):
+                    if confirm := self.wait_feature(
+                            ['confirm_btn_hcenter_vcenter', 'confirm_btn_highlight_hcenter_vcenter'],
+                            raise_if_not_found=False,
+                            threshold=0.6,
+                            time_out=2):
+                        self.click(0.49, 0.55, after_sleep=0.5)  # 点击不再提醒
+                        self.click(confirm, after_sleep=0.5)
                         self.wait_click_feature(
                             ['confirm_btn_hcenter_vcenter', 'confirm_btn_highlight_hcenter_vcenter'],
                             relative_x=-1, raise_if_not_found=False,

@@ -6,7 +6,7 @@ import numpy as np
 from ok import ConfigOption
 from src.task.process_feature import process_feature
 
-version = "v2.6.25"
+version = "v2.6.27"
 
 
 def calculate_pc_exe_path(running_path):
@@ -184,5 +184,6 @@ config = {
         ["src.task.SkipDialogTask", "AutoDialogTask"],
         ["src.task.AutoLoginTask", "AutoLoginTask"],
         ["src.task.MouseResetTask", "MouseResetTask"],
+        ["src.task.FastTravelTask", "FastTravelTask"],
     ], 'scene': ["src.scene.WWScene", "WWScene"],
 }
