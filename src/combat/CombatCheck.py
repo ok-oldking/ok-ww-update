@@ -204,19 +204,20 @@ class CombatCheck(BaseWWTask):
     def ocr_lv_text(self):
         lvs = self.ocr(box=self.target_area_box,
                        match=re.compile(r'lv\.\d{1,3}', re.IGNORECASE),
-                       target_height=540, name='lv_text', log=True)
+                       target_height=540, name='lv_text')
         return lvs
 
     def has_target(self, double_check=False):
         best = self.find_best_match_in_box(self.get_box_by_name('has_target').scale(1.1), ['has_target', 'no_target'],
                                            threshold=0.6)
         if not best:
-            best = self.find_best_match_in_box(self.get_box_by_name('target_box_long'), ['has_target', 'no_target'],
+            best = self.find_best_match_in_box(self.get_box_by_name('box_target_enemy_long'),
+                                               ['has_target', 'no_target'],
                                                threshold=0.6)
         if not best:
             best = self.find_best_match_in_box(self.get_box_by_name('target_box_long2'), ['has_target', 'no_target'],
                                                threshold=0.6)
-            
+
         if not best:
             best = self.find_best_match_in_box(self.get_box_by_name('has_target').scale(1.1, 2.0),
                                                ['has_target', 'no_target'],
