@@ -6,7 +6,7 @@ import numpy as np
 from ok import ConfigOption
 from src.task.process_feature import process_feature
 
-version = "v2.8.14"
+version = "v2.8.16"
 
 
 def calculate_pc_exe_path(running_path):
@@ -53,6 +53,9 @@ key_config_option = ConfigOption('Game Hotkey Config', {
     'Liberation Key': 'r',
     'Resonance Key': 'e',
     'Tool Key': 't',
+    'Jump Key': 'space',
+    'Dodge Key': 'lshift',
+    'Wheel Key': 'tab',
 }, description='In Game Hotkey for Skills')
 
 char_config_option = ConfigOption('Character Config', {
