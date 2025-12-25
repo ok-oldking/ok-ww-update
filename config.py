@@ -6,7 +6,7 @@ import numpy as np
 from ok import ConfigOption
 from src.task.process_feature import process_feature
 
-version = "v2.8.16"
+version = "v2.8.17"
 
 
 def calculate_pc_exe_path(running_path):
@@ -110,8 +110,10 @@ config = {
         'check_night_light': True,
         'force_no_night_light': False,
     },
-    'analytics': {
-        'report_url': 'http://report.ok-script.cn:8080/report',
+    'browser': {
+        'url': 'https://mc.kurogames.com/cloud/#/',
+        'resolution': (1600, 900),
+        'nick': 'Cloud Game',
     },
     'window_size': {
         'width': 900,
