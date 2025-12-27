@@ -579,8 +579,6 @@ class BaseWWTask(BaseTask):
         self.sleep(1)
 
     def yolo_find_echo(self, use_color=False, turn=True, update_function=None, time_out=8, threshold=0.5):
-        # if self.debug:
-        #     self.screenshot('yolo_echo_start')
         max_echo_count = 0
         if self.pick_echo():
             self.sleep(0.5)
@@ -687,9 +685,10 @@ class BaseWWTask(BaseTask):
                 self.log_info('点击登录按钮!')
                 return False
             if start := self.find_boxes(texts, boundary='bottom_right', match=["开始游戏", re.compile("进入游戏")]):
-                self.click(start)
-                self.log_info(f'点击开始游戏! {start}')
-                return False
+                if not self.find_boxes(texts, boundary='bottom_right', match="登录"):
+                    self.click(start)
+                    self.log_info(f'点击开始游戏! {start}')
+                    return False
 
     def in_team_and_world(self):
         return self.in_team()[
@@ -897,6 +896,7 @@ class BaseWWTask(BaseTask):
             self.send_key('f2', after_sleep=1)
             self.log_info('send f2 key to open the book')
         gray_book_boss = self.wait_book(feature)
+        self.sleep(0.5)
         if not gray_book_boss:
             self.log_error("can't find gray_book_boss, make sure f2 is the hotkey for book", notify=True)
             raise Exception("can't find gray_book_boss, make sure f2 is the hotkey for book")
