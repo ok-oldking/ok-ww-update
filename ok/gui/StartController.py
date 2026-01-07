@@ -117,7 +117,7 @@ class StartController(QObject):
             device = og.device_manager.get_preferred_device()
             error_msg = self.tr("{} is not connected, please select the game window.").format(
                 device['nick'])
-            logger.debug(f'test check_device_error msg: {error_msg}', )
+            logger.debug(f'test check_device_error msg: {error_msg}')
             if not device:
                 return self.tr('No game selected!')
             if og.device_manager.capture_method is None:
