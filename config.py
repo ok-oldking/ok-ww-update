@@ -6,7 +6,7 @@ import numpy as np
 from ok import ConfigOption
 from src.task.process_feature import process_feature
 
-version = "v3.0.13"
+version = "v3.0.14"
 
 
 def calculate_pc_exe_path(running_path):
@@ -113,7 +113,7 @@ config = {
     'browser': {
         'url': 'https://mc.kurogames.com/cloud/#/',
         'resolution': (1600, 900),
-        'nick': '云游戏',
+        'nick': '云游戏(需要Win11并安装Edge)',
     },
     'window_size': {
         'width': 900,
