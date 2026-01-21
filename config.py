@@ -6,7 +6,7 @@ import numpy as np
 from ok import ConfigOption
 from src.task.process_feature import process_feature
 
-version = "v3.0.20"
+version = "v3.0.21"
 
 
 def calculate_pc_exe_path(running_path):
@@ -150,7 +150,7 @@ config = {
             'sponsor': 'https://afdian.com/a/ok-oldking',
             'share': 'OK-WW 夸克网盘下载：https://pan.quark.cn/s/75b55ef72a34 GitHub下载: https://github.com/ok-oldking/ok-wuthering-waves/releases/latest',
             'faq': 'https://cnb.cool/ok-oldking/ok-wuthering-waves/-/blob/main/README.md',
-            'qq_group': '点击链接加入群聊【晒卡声骸踢群拉黑4】：https://qm.qq.com/q/6vNX9IYlYk',
+            'qq_group': 'https://qm.qq.com/q/6vNX9IYlYk',
             'qq_channel': 'https://pd.qq.com/s/djmm6l44y',
         },
     },
