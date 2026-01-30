@@ -6,7 +6,7 @@ import numpy as np
 from ok import ConfigOption
 from src.task.process_feature import process_feature
 
-version = "v3.0.23"
+version = "v3.0.24"
 
 
 def calculate_pc_exe_path(running_path):
@@ -123,8 +123,7 @@ config = {
     },
     'supported_resolution': {
         'ratio': '16:9',
-        'min_size': (1280, 720),
-        'resize_to': [(2560, 1440), (1920, 1080), (1600, 900), (1280, 720)],
+        'min_size': (1280, 720)
     },
     'links': {
         'default': {
