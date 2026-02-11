@@ -61,9 +61,9 @@ class CombatCheck(BaseWWTask):
             return True
         if recheck:
             logger.info('out of combat start double check')
-            # if self.debug:
-            #     self.screenshot('out of combat start double check')
+            self._in_combat = False
             if self.wait_until(self.check_health_bar, time_out=1.2):
+                self._in_combat = True
                 return True
         self.out_of_combat_reason = reason
         self.do_reset_to_false()
@@ -123,11 +123,10 @@ class CombatCheck(BaseWWTask):
     def is_boss(self):
         return self.find_one('boss_break_shield') or self.find_one('boss_break_lock')
 
-    def in_combat(self):
+    def in_combat(self, target=False):
         if self.in_liberation or self.recent_liberation():
             return True
         if self._in_combat:
-            now = time.time()
             if current_char := self.get_current_char():
                 if current_char.skip_combat_check():
                     return True
@@ -147,6 +146,9 @@ class CombatCheck(BaseWWTask):
         else:
             from src.task.AutoCombatTask import AutoCombatTask
             has_target = self.has_target()
+            if not has_target and target:
+                self.log_debug('try target')
+                self.middle_click(after_sleep=0.1)
             in_combat = has_target or ((self.config.get('Auto Target') or not isinstance(self,
                                                                                          AutoCombatTask)) and self.check_health_bar())
             if in_combat:
@@ -224,12 +226,11 @@ class CombatCheck(BaseWWTask):
             has_name += '_169'
             no_name += '_169'
         return has_name, no_name
-        
-    
+
     def has_target(self, double_check=False):
         threshold = 0.6
         has_name, no_name = self.get_target_names()
-       
+
         best = self.find_best_match_in_box(self.get_box_by_name(has_name).scale(1.1), [has_name, no_name],
                                            threshold=threshold)
         if not best:
