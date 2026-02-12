@@ -6,7 +6,7 @@ import numpy as np
 from ok import ConfigOption
 from src.task.process_feature import process_feature
 
-version = "v3.0.34"
+version = "v3.1.0"
 
 
 def calculate_pc_exe_path(running_path):
@@ -171,11 +171,11 @@ config = {
         ["src.task.NightmareNestTask", "NightmareNestTask"],
         ["src.task.SimulationTask", "SimulationTask"],
         ["src.task.TacetTask", "TacetTask"],
+        ["src.task.EnhanceEchoTask", "EnhanceEchoTask"],
         ["src.task.DiagnosisTask", "DiagnosisTask"],
     ], 'trigger_tasks': [
         ["src.task.AutoCombatTask", "AutoCombatTask"],
         ["src.task.AutoPickTask", "AutoPickTask"],
-        ["src.task.AutoEnhanceEchoTask", "AutoEnhanceEchoTask"],
         ["src.task.SkipDialogTask", "AutoDialogTask"],
         ["src.task.AutoLoginTask", "AutoLoginTask"],
         ["src.task.MouseResetTask", "MouseResetTask"],
