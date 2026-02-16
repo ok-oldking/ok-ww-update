@@ -88,6 +88,10 @@ class BaseChar:
         self.logger = Logger.get_logger(self.name)
         self.check_f_on_switch = True
 
+    def flying_based_on_resonance(self):
+        if not self.has_cd('resonance') and not self.task.box_highlighted('resonance'):
+            return True
+
     def skip_combat_check(self):
         """是否在某些操作中跳过战斗状态检查。
 
@@ -254,7 +258,7 @@ class BaseChar:
         self.task.screenshot('click_resonance too long, breaking')
 
     def click_resonance(self, post_sleep=0, has_animation=False, send_click=True, animation_min_duration=0,
-                        check_cd=False):
+                        check_cd=False, time_out=0):
         """尝试点击并释放共鸣技能。
 
         Args:
@@ -272,20 +276,26 @@ class BaseChar:
         last_click = 0
         last_op = 'click'
         resonance_click_time = 0
-        animated = False
         start = time.time()
+        animation_start = 0
+        if time_out == 0:
+            the_time_out = SKILL_TIME_OUT
+        else:
+            the_time_out = time_out
         while True:
-            if time.time() - start > SKILL_TIME_OUT:
+            if time.time() - start > the_time_out:
                 self.task.in_liberation = False
-                self.alert_skill_failed()
+                if the_time_out == 0:
+                    self.alert_skill_failed()
                 break
             elif self.task.in_liberation and time.time() - start > 6:
                 self.task.in_liberation = False
-                animated = True
                 break
             if has_animation:
                 if not self.task.in_team()[0]:
                     self.task.in_liberation = True
+                    animation_start = time.time()
+                    the_time_out = SKILL_TIME_OUT
                     if time.time() - resonance_click_time > 6:
                         self.task.in_liberation = False
                         self.logger.error(f'resonance animation too long, breaking')
@@ -294,16 +304,14 @@ class BaseChar:
                     continue
                 elif self.task.in_liberation:
                     self.task.in_liberation = False
-                    animated = True
+                    self.logger.debug(f'click_resonance animated break')
+                    break
 
             self.check_combat()
             now = time.time()
             if not self.resonance_available() and (
                     not has_animation or now - start > animation_min_duration):
                 self.logger.debug(f'click_resonance not available break')
-                break
-            if animated:
-                self.logger.debug(f'click_resonance animated break')
                 break
             self.logger.debug(f'click_resonance resonance_available click')
 
@@ -327,10 +335,10 @@ class BaseChar:
         if clicked:
             self.sleep(post_sleep)
         duration = time.time() - resonance_click_time if resonance_click_time != 0 else 0
-        if animated:
-            self.add_freeze_duration(resonance_click_time, duration)
-        self.logger.debug(f'click_resonance end clicked {clicked} duration {duration} animated {animated}')
-        return clicked, duration, animated
+        if animation_start > 0:
+            self.add_freeze_duration(resonance_click_time, time.time() - animation_start)
+        self.logger.debug(f'click_resonance end clicked {clicked} duration {duration} animated {animation_start > 0}')
+        return clicked, duration, animation_start > 0
 
     def send_resonance_key(self, post_sleep=0, interval=-1, down_time=0.01):
         """发送共鸣技能按键。
@@ -710,13 +718,13 @@ class BaseChar:
         self.task.draw_boxes('forte_full', box)
         return white_percent > 0.08
 
-    def liberation_available(self):
+    def liberation_available(self, check_color=True):
         """判断共鸣解放是否可用。
 
         Returns:
             bool: 如果可用则返回 True。
         """
-        return self.available('liberation')
+        return self.available('liberation', check_color=check_color)
 
     def __str__(self):
         """返回角色类名作为其字符串表示。"""
@@ -800,6 +808,7 @@ class BaseChar:
         self.task.mouse_down()
         self.sleep(duration)
         self.task.mouse_up()
+        self.sleep(0.01)
         self.logger.debug('heavy attack end')
 
     def current_resonance(self):
