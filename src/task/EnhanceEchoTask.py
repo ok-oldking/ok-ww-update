@@ -232,18 +232,19 @@ class EnhanceEchoTask(BaseWWTask, FindFeature):
     def esc(self):
         start = time.time()
         while not self.find_echo_enhance() and time.time() - start < 5:
-            self.send_key('esc', after_sleep=0.7)
+            self.send_key('esc', after_sleep=1)
+        self.sleep(0.1)
 
     def trash_and_esc(self):
         self.info_incr('失败声骸数量')
         start = time.time()
         success = False
         while time.time() - start < 5:
-            drop_status = self.find_best_match_in_box(self.get_box_by_name('echo_droped').scale(1.05),
-                                                      ['echo_droped', 'echo_not_droped'], threshold=0.7)
+            drop_status = self.find_best_match_in_box(self.get_box_by_name('echo_dropped').scale(1.05),
+                                                      ['echo_dropped', 'echo_not_dropped'], threshold=0.7)
             if not drop_status:
                 raise Exception('无法找到声骸弃置状态!')
-            if drop_status.name == 'echo_not_droped':
+            if drop_status.name == 'echo_not_dropped':
                 self.send_key('z', after_sleep=1)
             else:
                 self.log_info('成功弃置!')
