@@ -31,14 +31,14 @@ class EnhanceEchoTask(BaseWWTask, FindFeature):
             '必须有双爆': True,
             '双爆出现之前必须全有效词条': True,
             '双爆总计>=': 13.8,
-            '首条暴击>=': 6.9,
-            '首条暴击伤害>=': 13.8,
-            '无效词条>=则终止': 3,
+            '首条双爆>=': 6.9,
+            '有效词条>=': 3,
             '第一条必须为有效词条': True,
             '有效词条': ['暴击', '暴击伤害', '攻击百分比']
         })
         self.config_type["有效词条"] = {'type': "multi_selection",
                                         'options': ['暴击伤害', '暴击', '攻击百分比', '生命百分比', '防御百分比',
+                                                    '攻击', '生命', '防御',
                                                     '共鸣效率', '普攻伤害加成',
                                                     '重击伤害加成', '共鸣解放伤害加成',
                                                     '共鸣技能伤害加成']}
@@ -46,9 +46,8 @@ class EnhanceEchoTask(BaseWWTask, FindFeature):
             '必须有双爆': '如果开启，声骸最终必须同时拥有暴击和暴击伤害。如果剩余孔位不足以凑齐双爆，则丢弃',
             '双爆出现之前必须全有效词条': '开启后，在暴击或暴击伤害词条出现之前，前面的所有词条必须都在有效词条列表中',
             '双爆总计>=': '当声骸同时存在暴击和爆伤时，需要满足 暴击 + (爆伤/2) >= 此数值',
-            '首条暴击>=': '仅检查第一条出现的暴击是否满足条件',
-            '首条暴击伤害>=': '仅检查第一条出现的暴击伤害是否满足条件',
-            '无效词条>=则终止': '当检测到的无效词条数量达到此数值时，停止强化并丢弃',
+            '首条双爆>=': '仅检查第一条出现的暴击或暴击伤害是否满足条件, 爆伤/2',
+            '有效词条>=': '声骸满级时需达到的有效词条数量，若剩余孔位无法凑齐该数量，则停止强化并丢弃',
             '第一条必须为有效词条': '如果开启，第一个副词条必须在有效词条列表中且符合数值要求，否则直接丢弃',
             '有效词条': '定义哪些属性被视为有效',
         }
@@ -90,7 +89,6 @@ class EnhanceEchoTask(BaseWWTask, FindFeature):
 
             while True:
                 start_wait = time.time()
-                add_mat = None
                 have_add_mat = False
                 while time.time() - start_wait < 5:
                     add_mat = self.find_add_mat()
@@ -98,6 +96,7 @@ class EnhanceEchoTask(BaseWWTask, FindFeature):
                         have_add_mat = True
                         self.click(add_mat, after_sleep=0.3)
                     else:
+                        self.next_frame()
                         break
                 if not have_add_mat:
                     raise Exception('强化方式需要改为阶段放入!')
@@ -107,7 +106,7 @@ class EnhanceEchoTask(BaseWWTask, FindFeature):
                                     after_sleep=1.5)
                 while handle := self.wait_ocr(0.24, 0.18, 0.75, 0.93,
                                               match=['本次登录不再提示', '调谐成功', '点击任意位置返回'],
-                                              time_out=1):
+                                              time_out=2):
                     if handle[0].name == '本次登录不再提示':
                         click = handle[0]
                         click.width = 1
@@ -115,7 +114,9 @@ class EnhanceEchoTask(BaseWWTask, FindFeature):
                         self.click(click, after_sleep=0.5)
                         self.wait_click_ocr(0.24, 0.18, 0.75, 0.93, match='确认', after_sleep=0.5)
                     elif handle[0].name in ['点击任意位置返回', '调谐成功']:
-                        self.click(handle, after_sleep=0.5)
+                        self.click(handle, after_sleep=1)
+                    else:
+                        self.sleep(0.5)
 
                 texts = self.ocr(0.11, 0.29, 0.36, 0.51)
                 properties = self.find_boxes(texts, match=property_pattern)
@@ -127,14 +128,25 @@ class EnhanceEchoTask(BaseWWTask, FindFeature):
                     self.trash_and_esc()
                     break
 
-                if len(values) == 5:
+                if len(properties) >= 5:
                     self.lock_and_esc()
                     break
 
     def check_echo_stats(self, properties, values):
         self.fail_reason = ""
         invalid_count = 0
-        total_count = len(values)
+
+        paired_stats = []
+        unmatched_values = values.copy()
+        for prop in properties:
+            matched_val_text = "0"
+            if unmatched_values:
+                closest_val = min(unmatched_values, key=lambda v: abs(prop.y - v.y))
+                matched_val_text = closest_val.name
+                unmatched_values.remove(closest_val)
+            paired_stats.append((prop.name, matched_val_text))
+
+        total_count = len(paired_stats)
 
         crit_rate_val = 0
         crit_dmg_val = 0
@@ -147,17 +159,13 @@ class EnhanceEchoTask(BaseWWTask, FindFeature):
 
         valid_stats = self.config.get('有效词条') or []
 
-        for i in range(total_count):
-            p = properties[i].name
-            v = parse_number(values[i].name)
+        for p, v_str in paired_stats:
+            v = parse_number(v_str)
 
             is_valid_prop = True
 
             if p in ['攻击', '生命', '防御']:
-                if '%' not in values[i].name:
-                    is_valid_prop = False
-                    self.log_debug(f'非百分比属性, {p} 不符合条件')
-                else:
+                if '%' in v_str:
                     p += '百分比'
 
             is_crit_stat = p in ['暴击', '暴击伤害']
@@ -181,18 +189,20 @@ class EnhanceEchoTask(BaseWWTask, FindFeature):
                 crit_rate_val += v
                 if '暴击' in valid_stats and not checked_first_crit_rate:
                     checked_first_crit_rate = True
-                    if v < self.config.get('首条暴击>='):
-                        is_valid_prop = False
-                        self.log_info(f'首条暴击 {v} < {self.config.get("首条暴击>=")}')
+                    if v < self.config.get('首条双爆>='):
+                        self.fail_reason = f'首条暴击不足_{v}'
+                        self.log_info(f'首条暴击 {v} < {self.config.get("首条双爆>=")}，丢弃')
+                        return False
 
             elif p == '暴击伤害':
                 has_crit_dmg = True
                 crit_dmg_val += v
                 if '暴击伤害' in valid_stats and not checked_first_crit_dmg:
                     checked_first_crit_dmg = True
-                    if v < self.config.get('首条暴击伤害>='):
-                        is_valid_prop = False
-                        self.log_info(f'首条暴击伤害 {v} < {self.config.get("首条暴击伤害>=")}')
+                    if v / 2 < self.config.get('首条双爆>='):
+                        self.fail_reason = f'首条爆伤不足_{v}'
+                        self.log_info(f'首条爆伤 {v} < {self.config.get("首条双爆>=")}，丢弃')
+                        return False
 
             if not is_valid_prop:
                 invalid_count += 1
@@ -219,15 +229,17 @@ class EnhanceEchoTask(BaseWWTask, FindFeature):
             self.log_info('第一条必须为有效词条, 丢弃')
             return False
 
-        if invalid_count >= self.config.get('无效词条>=则终止'):
-            self.fail_reason = f'{invalid_count}无效词条终止'
-            self.log_info(f'{invalid_count}无效词条>=则终止, 丢弃')
+        valid_count = total_count - invalid_count
+        remaining_slots = 5 - total_count
+        if (valid_count + remaining_slots) < self.config.get('有效词条>='):
+            self.fail_reason = f'有效词条不足_上限{valid_count + remaining_slots}'
+            self.log_info(f'剩余孔位不足以达到设定的有效词条数量, 丢弃')
             return False
 
         return True
 
     def find_add_mat(self):
-        return self.wait_ocr(0.22, 0.67, 0.31, 0.72, match=['阶段放入'], time_out=1)
+        return self.wait_ocr(0.09, 0.6, 0.38, 0.86, match=['阶段放入'], time_out=1)
 
     def esc(self):
         start = time.time()
