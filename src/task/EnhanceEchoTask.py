@@ -117,8 +117,10 @@ class EnhanceEchoTask(BaseWWTask, FindFeature):
                         self.click(handle, after_sleep=1)
                     else:
                         self.sleep(0.5)
-
-                texts = self.ocr(0.11, 0.29, 0.36, 0.51)
+                self.sleep(0.1)
+                texts = self.ocr()
+                texts = self.find_boxes(texts, boundary=self.box_of_screen(0.09, 0.28, 0.40, 0.53))
+                self.log_info(f'found values: {texts}')
                 properties = self.find_boxes(texts, match=property_pattern)
                 values = self.find_boxes(texts, match=number_pattern)
                 self.info_set('属性', properties)
@@ -153,8 +155,7 @@ class EnhanceEchoTask(BaseWWTask, FindFeature):
         has_crit_rate = False
         has_crit_dmg = False
 
-        checked_first_crit_rate = False
-        checked_first_crit_dmg = False
+        checked_first_crit = False
         has_encountered_crit = False
 
         valid_stats = self.config.get('有效词条') or []
@@ -187,8 +188,8 @@ class EnhanceEchoTask(BaseWWTask, FindFeature):
             if p == '暴击':
                 has_crit_rate = True
                 crit_rate_val += v
-                if '暴击' in valid_stats and not checked_first_crit_rate:
-                    checked_first_crit_rate = True
+                if '暴击' in valid_stats and not checked_first_crit:
+                    checked_first_crit = True
                     if v < self.config.get('首条双爆>='):
                         self.fail_reason = f'首条暴击不足_{v}'
                         self.log_info(f'首条暴击 {v} < {self.config.get("首条双爆>=")}，丢弃')
@@ -197,8 +198,8 @@ class EnhanceEchoTask(BaseWWTask, FindFeature):
             elif p == '暴击伤害':
                 has_crit_dmg = True
                 crit_dmg_val += v
-                if '暴击伤害' in valid_stats and not checked_first_crit_dmg:
-                    checked_first_crit_dmg = True
+                if '暴击伤害' in valid_stats and not checked_first_crit:
+                    checked_first_crit = True
                     if v / 2 < self.config.get('首条双爆>='):
                         self.fail_reason = f'首条爆伤不足_{v}'
                         self.log_info(f'首条爆伤 {v} < {self.config.get("首条双爆>=")}，丢弃')
