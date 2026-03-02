@@ -1938,7 +1938,7 @@ class BaseTask(OCR):
         """
         ...
 
-    def set_executor(self, executor: "TaskExecutor") -> None:
+    def on_create(self, executor: "TaskExecutor") -> None:
         """
         Sets executor.
 
