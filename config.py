@@ -6,7 +6,7 @@ import numpy as np
 from ok import ConfigOption
 from src.task.process_feature import process_feature
 
-version = "v3.1.56"
+version = "v3.1.57"
 
 
 def calculate_pc_exe_path(running_path):
@@ -60,6 +60,7 @@ key_config_option = ConfigOption('Game Hotkey Config', {
 
 char_config_option = ConfigOption('Character Config', {
     'Iuno C6': False,
+    'Chisa DPS': False,
 }, description='Character Config')
 
 pick_echo_config_option = ConfigOption('Pick Echo Config', {
