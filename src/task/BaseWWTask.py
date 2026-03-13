@@ -218,6 +218,7 @@ class BaseWWTask(BaseTask):
             if end_condition:
                 ended = end_condition()
                 if ended:
+                    logger.info(f'do_walk_to_box ended {ended}')
                     break
             treasure_icon = find_function()
             if isinstance(treasure_icon, list):
@@ -879,10 +880,10 @@ class BaseWWTask(BaseTask):
         # Function to check if a component forms a ring
 
     def find_monthly_card(self):
-        return self.find_one('monthly_card', threshold=0.8, vertical_variance=0.07)
+        return self.find_one('monthly_card', threshold=0.8)
 
     def handle_monthly_card(self):
-        monthly_card = self.find_monthly_card
+        monthly_card = self.find_monthly_card()
         # self.screenshot('monthly_card1')
         if monthly_card is not None:
             # self.screenshot('monthly_card1')
