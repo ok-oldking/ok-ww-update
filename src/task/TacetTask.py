@@ -16,6 +16,7 @@ class TacetTask(WWOneTimeTask, BaseCombatTask):
         self.group_icon = FluentIcon.HOME
         self.description = "Farms the selected Tacet Suppression, until no stamina. Must be able to teleport (F2)."
         self.name = "Tacet Suppression"
+        self.support_schedule_task = True
         default_config = {
             'Which Tacet Suppression to Farm': 1,  # starts with 1
         }
@@ -41,6 +42,7 @@ class TacetTask(WWOneTimeTask, BaseCombatTask):
 
     def run(self):
         super().run()
+        self.ensure_main(time_out=180)
         self.wait_in_team_and_world(esc=True)
         self.farm_tacet()
 
@@ -99,7 +101,7 @@ class TacetTask(WWOneTimeTask, BaseCombatTask):
         if back:
             self.back(after_sleep=1)
 
-    def teleport_to_tacet(self, index):
+    def teleport_to_tacet(self):
         self.info_set('Teleport to Tacet Suppression', index)
         if index >= self.total_number:
             raise IndexError(f'Index out of range, max is {self.total_number}')
