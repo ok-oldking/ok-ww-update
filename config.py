@@ -6,7 +6,7 @@ import numpy as np
 from ok import ConfigOption
 from src.task.process_feature import process_feature
 
-version = "v3.1.83"
+version = "v3.1.84"
 
 
 def calculate_pc_exe_path(running_path):
@@ -107,7 +107,7 @@ config = {
     'windows': {  # required  when supporting windows game
         'exe': 'Client-Win64-Shipping.exe',
         'calculate_pc_exe_path': calculate_pc_exe_path,
-        'hwnd_class': 'UnrealWindow',
+        # 'hwnd_class': 'UnrealWindow',
         'interaction': 'PostMessage',
         'capture_method': ['WGC', 'BitBlt_RenderFull'],  # Windows版本支持的话, 优先使用WGC, 否则使用BitBlt_Full
         'check_hdr': False,
