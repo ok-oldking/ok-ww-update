@@ -1,15 +1,15 @@
 import json
 import os
-import time
+from typing import TypedDict
 
 import cv2
-from PySide6.QtCore import Qt, QSize, Signal, QThread, QTimer, QRunnable, QThreadPool, QObject
-from PySide6.QtGui import QPixmap, QImage, QIcon
+from PySide6.QtCore import Qt, Signal, QTimer, QRunnable, QThreadPool, QObject
+from PySide6.QtGui import QPixmap, QImage
 from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout,
-                               QScrollArea, QLabel, QSizePolicy, QFrame)
+                               QScrollArea, QLabel, QFrame)
 from qfluentwidgets import (PushButton, PrimaryPushButton, FluentIcon,
-                             SearchLineEdit, MessageBox, BodyLabel, isDarkTheme,
-                             qconfig, IndeterminateProgressRing)
+                            SearchLineEdit, MessageBox, BodyLabel, isDarkTheme,
+                            qconfig, IndeterminateProgressRing)
 
 from ok import og
 from ok.util.logger import Logger
@@ -24,6 +24,34 @@ CARD_HEIGHT = THUMB_SIZE + 40
 GRID_SPACING = 8
 
 
+class ImageDict(TypedDict):
+    id: int
+    file_name: str
+    width: int
+    height: int
+
+
+class AnnotationDict(TypedDict):
+    id: int
+    image_id: int
+    category_id: int
+    bbox: list[float]  # [x, y, w, h]
+    area: float
+    iscrowd: int
+
+
+class CategoryDict(TypedDict):
+    id: int
+    name: str
+    supercategory: str
+
+
+class CocoData(TypedDict):
+    images: list[ImageDict]
+    annotations: list[AnnotationDict]
+    categories: list[CategoryDict]
+
+
 def ensure_template_folder():
     folder = os.path.join(os.getcwd(), TEMPLATE_FOLDER)
     if not os.path.exists(folder):
@@ -35,7 +63,7 @@ def get_coco_path():
     return os.path.join(ensure_template_folder(), COCO_JSON)
 
 
-def load_coco():
+def load_coco() -> CocoData:
     path = get_coco_path()
     if os.path.exists(path):
         try:
@@ -52,6 +80,9 @@ def load_coco():
 
 def save_coco(coco_data):
     path = get_coco_path()
+    coco_data['annotations'].sort(key=lambda x: x['id'])
+    coco_data['categories'].sort(key=lambda x: x['id'])
+    coco_data['images'].sort(key=lambda x: x['id'])
     with open(path, 'w', encoding='utf-8') as f:
         json.dump(coco_data, f, indent=2, ensure_ascii=False)
 
@@ -198,14 +229,14 @@ class ImageCard(QFrame):
         layout.setSpacing(2)
         layout.setAlignment(Qt.AlignCenter)
 
-        self.features_label = QLabel()
+        self.features_label = BodyLabel()
         self.features_label.setAlignment(Qt.AlignCenter)
         self.features_label.setWordWrap(True)
 
         self.thumb_label = QLabel()
         self.thumb_label.setAlignment(Qt.AlignCenter)
 
-        self.name_label = QLabel(os.path.splitext(os.path.basename(image_path))[0])
+        self.name_label = BodyLabel(os.path.splitext(os.path.basename(image_path))[0])
         self.name_label.setAlignment(Qt.AlignCenter)
         self.name_label.setWordWrap(True)
 

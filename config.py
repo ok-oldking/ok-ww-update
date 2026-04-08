@@ -7,7 +7,7 @@ import numpy as np
 from ok import ConfigOption
 from src.task.process_feature import process_feature
 
-version = "v3.2.2"
+version = "v3.2.3"
 
 
 def calculate_pc_exe_path(running_path):
@@ -87,6 +87,7 @@ config = {
     'global_configs': [key_config_option, char_config_option, pick_echo_config_option, monthly_card_config_option],
     'ocr': {
         'lib': 'onnxocr',
+        'auto_simplify': True,
         'params': {
             'use_openvino': True,
             'use_npu': True,

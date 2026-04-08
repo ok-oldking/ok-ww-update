@@ -1,12 +1,11 @@
 import os
-import sys
-from PySide6.QtCore import Qt, Signal, QSize, QRect
-from PySide6.QtGui import QSyntaxHighlighter, QTextCharFormat, QFont, QColor, QPainter, QFontMetrics
-from PySide6.QtWidgets import QWidget, QHBoxLayout, QVBoxLayout, QInputDialog, QMessageBox, QListWidgetItem, QTreeWidgetItem, QAbstractItemView, QFileDialog
-from qfluentwidgets import ListWidget, TextEdit, MessageBox, PlainTextEdit, PushButton, FluentIcon, Dialog, PrimaryPushButton, SearchLineEdit, \
-    BodyLabel, ComboBox, PrimaryDropDownToolButton, RoundMenu, Action, TreeWidget, TreeView, CommandBar, \
-    TransparentDropDownToolButton, TransparentDropDownPushButton, CheckBox
+
 from PySide6.QtCore import QFileSystemWatcher
+from PySide6.QtCore import Qt, QSize, QRect
+from PySide6.QtGui import QSyntaxHighlighter, QTextCharFormat, QFont, QColor, QPainter
+from PySide6.QtWidgets import QWidget, QHBoxLayout, QVBoxLayout, QMessageBox, QTreeWidgetItem, QFileDialog
+from qfluentwidgets import MessageBox, PlainTextEdit, PushButton, FluentIcon, PrimaryPushButton, SearchLineEdit, \
+    BodyLabel, ComboBox, RoundMenu, Action, TreeWidget, TransparentDropDownPushButton, CheckBox
 
 from ok import og
 from ok.gui.tasks.TemplateFactory import TemplateFactory, get_templates, filter_templates
@@ -242,6 +241,9 @@ class EditTaskTab(QWidget):
         self.template_list.setMaximumWidth(250)
         self._populate_template_list("")
         self.template_list.itemClicked.connect(self.on_template_clicked)
+        self.template_list.itemExpanded.connect(self.on_item_expanded_collapsed)
+        self.template_list.itemCollapsed.connect(self.on_item_expanded_collapsed)
+        self._last_toggled_time = 0
         self.template_panel.addWidget(self.template_list)
         
         template_container = QWidget()
@@ -724,9 +726,17 @@ class EditTaskTab(QWidget):
                 from ok.gui.util.Alert import alert_error
                 alert_error(f"Error deleting task: {e}")
 
+    def on_item_expanded_collapsed(self, item):
+        import time
+        self._last_toggled_time = time.time()
+
     def on_template_clicked(self, item, column):
+        import time
         template = item.data(0, Qt.UserRole)
         if not template:
+            # If the item was expanded/collapsed natively by the chevron just now, don't revert it
+            if time.time() - getattr(self, '_last_toggled_time', 0) < 0.1:
+                return
             if item.isExpanded():
                 item.setExpanded(False)
             else:
@@ -1021,8 +1031,6 @@ class {class_name}({base_class}):
                 alert_error(f"{self.tr('Export failed')}: {message}")
 
     def show_import_dialog(self):
-        from ok.gui.util.Alert import alert_error
-        from ok.gui.tasks.ScriptPackager import import_script
 
         file_path, _ = QFileDialog.getOpenFileName(
             self, self.tr('Select Script File'), '',
