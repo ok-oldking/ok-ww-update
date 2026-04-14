@@ -1331,6 +1331,14 @@
             <source>Kill Launcher after Start</source>
             <translation>启动后关闭启动器</translation>
         </message>
+        <message>
+            <source>Target window active: Recording resumed</source>
+            <translation>目标窗口激活：恢复录制</translation>
+        </message>
+        <message>
+            <source>Target window inactive: Recording paused</source>
+            <translation>目标窗口非激活：暂停录制</translation>
+        </message>
     </context>
     <context>
         <name>ScheduleTaskTable</name>
@@ -2308,6 +2316,34 @@
             <source>Import failed</source>
             <translation>导入失败</translation>
         </message>
+        <message>
+            <source>No loop</source>
+            <translation>不循环</translation>
+        </message>
+        <message>
+            <source>Loop x times</source>
+            <translation>循环指定次数</translation>
+        </message>
+        <message>
+            <source>Loop infinitely</source>
+            <translation>无限循环</translation>
+        </message>
+        <message>
+            <source>OK</source>
+            <translation>确定</translation>
+        </message>
+        <message>
+            <source>Cancel</source>
+            <translation>取消</translation>
+        </message>
+        <message>
+            <source>Recording will start when window '{hwnd_name}' becomes active.</source>
+            <translation>在窗口 '{hwnd_name}' 处于活动状态时，将开始录制。</translation>
+        </message>
+        <message>
+            <source>Guide</source>
+            <translation>教程</translation>
+        </message>
     </context>
     <context>
         <name>CreateTaskDialog</name>
@@ -2534,7 +2570,7 @@
         <name>Task</name>
         <message>
             <source>NPU inferring Error, you might need to update the Intel NPU driver!</source>
-            <translation>NPU 推理错误，您可能需要更新 Intel NPU 驱动！</translation>
+            <translation>NPU推理错误，您可能需要更新Intel NPU驱动！</translation>
         </message>
     </context>
 </TS>

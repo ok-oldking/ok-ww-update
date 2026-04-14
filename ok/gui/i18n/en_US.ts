@@ -1335,6 +1335,14 @@
             <source>Kill Launcher after Start</source>
             <translation>Kill Launcher after Start</translation>
         </message>
+        <message>
+            <source>Target window active: Recording resumed</source>
+            <translation>Target window active: Recording resumed</translation>
+        </message>
+        <message>
+            <source>Target window inactive: Recording paused</source>
+            <translation>Target window inactive: Recording paused</translation>
+        </message>
     </context>
     <context>
         <name>ScheduleTaskTable</name>
@@ -2311,6 +2319,34 @@
         <message>
             <source>Import failed</source>
             <translation>Import failed</translation>
+        </message>
+        <message>
+            <source>No loop</source>
+            <translation>No loop</translation>
+        </message>
+        <message>
+            <source>Loop x times</source>
+            <translation>Loop x times</translation>
+        </message>
+        <message>
+            <source>Loop infinitely</source>
+            <translation>Loop infinitely</translation>
+        </message>
+        <message>
+            <source>OK</source>
+            <translation>OK</translation>
+        </message>
+        <message>
+            <source>Cancel</source>
+            <translation>Cancel</translation>
+        </message>
+        <message>
+            <source>Recording will start when window '{hwnd_name}' becomes active.</source>
+            <translation>Recording will start when window '{hwnd_name}' becomes active.</translation>
+        </message>
+        <message>
+            <source>Guide</source>
+            <translation>Guide</translation>
         </message>
     </context>
     <context>

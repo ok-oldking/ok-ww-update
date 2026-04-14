@@ -1329,6 +1329,14 @@
             <source>None</source>
             <translation>無</translation>
         </message>
+        <message>
+            <source>Target window active: Recording resumed</source>
+            <translation>目標窗口激活：恢復錄製</translation>
+        </message>
+        <message>
+            <source>Target window inactive: Recording paused</source>
+            <translation>目標窗口非激活：暫停錄製</translation>
+        </message>
     </context>
     <context>
         <name>ScheduleTaskTable</name>
@@ -2306,6 +2314,34 @@
             <source>Import failed</source>
             <translation>匯入失敗</translation>
         </message>
+        <message>
+            <source>No loop</source>
+            <translation>不循環</translation>
+        </message>
+        <message>
+            <source>Loop x times</source>
+            <translation>循環指定次數</translation>
+        </message>
+        <message>
+            <source>Loop infinitely</source>
+            <translation>無限循環</translation>
+        </message>
+        <message>
+            <source>OK</source>
+            <translation>確定</translation>
+        </message>
+        <message>
+            <source>Cancel</source>
+            <translation>取消</translation>
+        </message>
+        <message>
+            <source>Recording will start when window '{hwnd_name}' becomes active.</source>
+            <translation>在視窗 '{hwnd_name}' 處於活動狀態時，將開始錄製。</translation>
+        </message>
+        <message>
+            <source>Guide</source>
+            <translation>指南</translation>
+        </message>
     </context>
     <context>
         <name>CreateTaskDialog</name>
@@ -2532,7 +2568,7 @@
         <name>Task</name>
         <message>
             <source>NPU inferring Error, you might need to update the Intel NPU driver!</source>
-            <translation type="unfinished" />
+            <translation>NPU推理錯誤，您可能需要更新Intel NPU驅動程式！</translation>
         </message>
     </context>
 </TS>

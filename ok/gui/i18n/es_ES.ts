@@ -1333,6 +1333,14 @@
             <source>None</source>
             <translation>Ninguno</translation>
         </message>
+        <message>
+            <source>Target window active: Recording resumed</source>
+            <translation>Ventana de destino activa: Grabación reanudada</translation>
+        </message>
+        <message>
+            <source>Target window inactive: Recording paused</source>
+            <translation>Ventana de destino inactiva: Grabación pausada</translation>
+        </message>
     </context>
     <context>
         <name>ScheduleTaskTable</name>
@@ -2310,6 +2318,34 @@
             <source>Import failed</source>
             <translation>Error al importar</translation>
         </message>
+        <message>
+            <source>No loop</source>
+            <translation>Sin bucle</translation>
+        </message>
+        <message>
+            <source>Loop x times</source>
+            <translation>Bucle x veces</translation>
+        </message>
+        <message>
+            <source>Loop infinitely</source>
+            <translation>Bucle infinito</translation>
+        </message>
+        <message>
+            <source>OK</source>
+            <translation>Aceptar</translation>
+        </message>
+        <message>
+            <source>Cancel</source>
+            <translation>Cancelar</translation>
+        </message>
+        <message>
+            <source>Recording will start when window '{hwnd_name}' becomes active.</source>
+            <translation>La grabación comenzará cuando la ventana '{hwnd_name}' esté activa.</translation>
+        </message>
+        <message>
+            <source>Guide</source>
+            <translation>Guía</translation>
+        </message>
     </context>
     <context>
         <name>CreateTaskDialog</name>
@@ -2536,7 +2572,7 @@
         <name>Task</name>
         <message>
             <source>NPU inferring Error, you might need to update the Intel NPU driver!</source>
-            <translation type="unfinished" />
+            <translation>¡Error de inferencia de la NPU, es posible que necesite actualizar el controlador de la NPU de Intel!</translation>
         </message>
     </context>
 </TS>

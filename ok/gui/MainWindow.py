@@ -392,10 +392,10 @@ class MainWindow(MSFluentWindow):
 
     def show_notification(self, message, title=None, error=False, tray=False, show_tab=None, params=None):
         from ok.gui.util.app import show_info_bar
-        translated_message = QCoreApplication.translate("@default", message)
+        translated_message = QCoreApplication.translate("app", message)
         if params:
             translated_message = translated_message.format(**params)
-        translated_title = QCoreApplication.translate("@default", title) if title else ""
+        translated_title = QCoreApplication.translate("app", title) if title else ""
         show_info_bar(self.window(), translated_message, translated_title, error)
         if tray:
             self.tray.showMessage(translated_title, translated_message,

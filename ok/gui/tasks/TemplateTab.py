@@ -569,6 +569,9 @@ class TemplateTab(QWidget):
                 alert_error(self.tr("Failed to capture frame."))
                 return
 
+            if processor := og.config.get('screenshot_processor'):
+                frame = processor(frame.copy())
+
             folder = ensure_template_folder()
             name = get_next_image_name(folder)
             file_path = os.path.join(folder, f"{name}.png")
