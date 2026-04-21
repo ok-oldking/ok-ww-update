@@ -478,7 +478,10 @@ class PostMessageInteraction(BaseInteraction):
         self.post(win32con.WM_MOUSEWHEEL, wParam, long_position)
 
     def post(self, message, wParam=0, lParam=0):
-        win32gui.PostMessage(self.hwnd, message, wParam, lParam)
+        try:
+            win32gui.PostMessage(self.hwnd, message, wParam, lParam)
+        except Exception as e:
+            logger.error(f'PostMessage error {self.hwnd}: {e}')
 
     def swipe(self, x1, y1, x2, y2, duration=3, after_sleep=0.1, settle_time=0):
         # Move the mouse to the start point (x1, y1)
@@ -670,7 +673,6 @@ class BrowserInteraction(BaseInteraction):
             "esc": "Escape",
             "return": "Enter",
             "enter": "Enter",
-            "ctrl": "Control",
             "space": "Space",
             "backspace": "Backspace",
             "tab": "Tab",
@@ -679,7 +681,21 @@ class BrowserInteraction(BaseInteraction):
             "up": "ArrowUp",
             "down": "ArrowDown",
             "win": "Meta",
-            "command": "Meta"
+            "windows": "Meta",
+            "command": "Meta",
+            "meta": "Meta",
+            "alt": "Alt",
+            "lalt": "Alt",
+            "ralt": "Alt",
+            "ctrl": "Control",
+            "control": "Control",
+            "lctrl": "Control",
+            "rctrl": "Control",
+            "lcontrol": "Control",
+            "rcontrol": "Control",
+            "shift": "Shift",
+            "lshift": "ShiftLeft",
+            "rshift": "Shift",
         }
 
     def _map_key(self, key):
