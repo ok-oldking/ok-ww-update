@@ -6,7 +6,7 @@
 #
     # via -r .\requirements.in
 OpenCC==1.2.0
-onnxocr-ppocrv5==0.0.14
+onnxocr-ppocrv5==0.0.15
     # via -r .\requirements.in
 pyappify==1.0.2
 certifi==2025.7.14
