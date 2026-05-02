@@ -202,7 +202,7 @@ def get_crop_point(frame_width, frame_height, target_width, target_height):
     y = (frame_height - target_height) - x
     return x, y
 
-def composite_hwnds(bg, hwnd_window, contexts, bg_crop_x, bg_crop_y, render_full):
+def composite_hwnds(bg, hwnd_window, contexts, render_full):
     hwnds = getattr(hwnd_window, 'hwnds', None)
 
     if bg is not None and hwnds and len(hwnds) > 1:
@@ -266,8 +266,8 @@ def composite_hwnds(bg, hwnd_window, contexts, bg_crop_x, bg_crop_y, render_full
                 if ratio != 1.0:
                     img = cv2.resize(img, (w_w, w_h), interpolation=cv2.INTER_LINEAR)
 
-                paste_x = (w_client_x - bg_client_x) - bg_crop_x
-                paste_y = (w_client_y - bg_client_y) - bg_crop_y
+                paste_x = w_client_x - bg_client_x
+                paste_y = w_client_y - bg_client_y
 
                 # logger.debug(
                 #    f'composite_hwnds pasting {w_hwnd} to {paste_x},{paste_y} size={img.shape[1]}x{img.shape[0]} bg_size={width}x{height}')
@@ -557,16 +557,7 @@ class WindowsGraphicsCaptureMethod(BaseWindowsCaptureMethod):
 
             frame = self.crop_image(frame)
 
-            border = 0
-            title_height = 0
-            if frame is not None and getattr(self, 'last_size', None) is not None and getattr(self.hwnd_window, 'width',
-                                                                                              0) > 0:
-                border, title_height = get_crop_point(self.last_size.Width, self.last_size.Height,
-                                                      self.hwnd_window.width, self.hwnd_window.height)
-                if border < 0: border = 0
-                if title_height < 0: title_height = 0
-
-            frame = composite_hwnds(frame, self.hwnd_window, self.contexts, border, title_height, render_full)
+            frame = composite_hwnds(frame, self.hwnd_window, self.contexts, render_full)
 
             if frame is not None:
                 new_height = frame.shape[0]
@@ -636,7 +627,7 @@ class BitBltCaptureMethod(BaseWindowsCaptureMethod):
             height = self.hwnd_window.real_height or self.hwnd_window.height
 
             bg = capture_by_bitblt(self, self.hwnd_window.hwnd, width, height, x, y, render_full)
-            bg = composite_hwnds(bg, self.hwnd_window, self.contexts, x, y, render_full)
+            bg = composite_hwnds(bg, self.hwnd_window, self.contexts, render_full)
 
             return bg
 

@@ -1104,7 +1104,7 @@ class BaseTask(OCR):
         pass
 
     def tr(self, message):
-        return self.app.tr(message)
+        return self._app.tr(message)
 
     def should_trigger(self):
         if self.trigger_interval == 0:
@@ -1193,7 +1193,7 @@ class BaseTask(OCR):
         self.logger.error(message, exception)
         if exception is not None:
             if len(exception.args) > 0:
-                message += exception.args[0]
+                message += str(exception.args[0])
             else:
                 message += str(exception)
         self.info_set("Error", message)
