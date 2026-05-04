@@ -26,7 +26,11 @@ class OverlayWidget(QWidget):
         self.setMouseTracking(True)
         self.timer = QTimer(self)
         self.timer.timeout.connect(self.update_mouse_position)
-        self.timer.start(1000)
+        self.timer.start(50)
+        self._copied = False
+        self._accumulated_coords = []
+        self._click_points = []
+        self._is_alt_down = False
         self.mouse_font = QFont()
         self.mouse_font.setPointSize(10)
         self.log_font = QFont()
@@ -108,6 +112,40 @@ class OverlayWidget(QWidget):
             relative = self.mapFromGlobal(QPoint(x / self.scaling, y / self.scaling))
             if self._mouse_position != relative and relative.x() > 0 and relative.y() > 0:
                 self._mouse_position = relative
+
+            alt_down = bool(win32api.GetAsyncKeyState(0x12) & 0x8000)
+            right_down = bool(win32api.GetAsyncKeyState(0x02) & 0x8000)
+            
+            self._is_alt_down = alt_down
+            
+            if not alt_down:
+                self._accumulated_coords = []
+                self._click_points = []
+                
+            if alt_down and right_down:
+                if not getattr(self, '_copied', False):
+                    if self.width() > 0 and self.height() > 0:
+                        x_percent = self._mouse_position.x() / self.width()
+                        y_percent = self._mouse_position.y() / self.height()
+                        
+                        if not hasattr(self, '_accumulated_coords'):
+                            self._accumulated_coords = []
+                        if not hasattr(self, '_click_points'):
+                            self._click_points = []
+                            
+                        if len(self._accumulated_coords) >= 2:
+                            self._accumulated_coords[1] = f"{x_percent:.3f}, {y_percent:.3f}"
+                            self._click_points[1] = self._mouse_position
+                        else:
+                            self._accumulated_coords.append(f"{x_percent:.3f}, {y_percent:.3f}")
+                            self._click_points.append(self._mouse_position)
+                            
+                        clipboard = QGuiApplication.clipboard()
+                        clipboard.setText(", ".join(self._accumulated_coords))
+                    self._copied = True
+            else:
+                self._copied = False
+
             self.update()
         except Exception as e:
             logger.warning(f'GetCursorPos exception {e}')
@@ -125,8 +163,49 @@ class OverlayWidget(QWidget):
         self.paint_boxes(painter)
         self.paint_mouse_position(painter)
         self.paint_logs(painter)
+        self.paint_alt_overlay(painter)
         if og.config.get('debug_cover_uid'):
             self.paint_uid_cover(painter)
+
+    def paint_alt_overlay(self, painter):
+        if not getattr(self, '_is_alt_down', False):
+            return
+            
+        painter.save()
+        
+        pen = QPen(QColor(0, 255, 0, 200))
+        pen.setWidth(1)
+        pen.setStyle(Qt.DashLine)
+        painter.setPen(pen)
+        
+        mx = self._mouse_position.x()
+        my = self._mouse_position.y()
+        
+        painter.drawLine(0, my, self.width(), my)
+        painter.drawLine(mx, 0, mx, self.height())
+        
+        points = getattr(self, '_click_points', [])
+        
+        pen.setStyle(Qt.SolidLine)
+        pen.setWidth(2)
+        pen.setColor(QColor(255, 0, 0, 200))
+        painter.setPen(pen)
+        
+        if len(points) == 1:
+            p = points[0]
+            painter.drawLine(p.x() - 5, p.y(), p.x() + 5, p.y())
+            painter.drawLine(p.x(), p.y() - 5, p.x(), p.y() + 5)
+        elif len(points) == 2:
+            p1 = points[0]
+            p2 = points[1]
+            x = min(p1.x(), p2.x())
+            y = min(p1.y(), p2.y())
+            w = abs(p1.x() - p2.x())
+            h = abs(p1.y() - p2.y())
+            painter.setBrush(QColor(255, 0, 0, 50))
+            painter.drawRect(x, y, w, h)
+            
+        painter.restore()
 
     def paint_boxes(self, painter):
         pen = QPen()
@@ -181,10 +260,19 @@ class OverlayWidget(QWidget):
         painter.drawRect(0, 0, self.width() - 1, self.height() - 1)
 
     def paint_mouse_position(self, painter):
+        if self.width() == 0 or self.height() == 0:
+            return
         x_percent = self._mouse_position.x() / self.width()
         y_percent = self._mouse_position.y() / self.height()
-        x, y = self._mouse_position.x() * 2, self._mouse_position.y() * 2
-        text = f"({x}, {y}, {x_percent:.2f}, {y_percent:.2f})"
+        
+        if og.device_manager.width > 0 and og.device_manager.height > 0:
+            x = int(x_percent * og.device_manager.width)
+            y = int(y_percent * og.device_manager.height)
+        else:
+            x = int(self._mouse_position.x())
+            y = int(self._mouse_position.y())
+            
+        text = f"{x}, {y}, {x_percent:.3f}, {y_percent:.3f} (alt+right to copy)"
         painter.setFont(self.mouse_font)
         
         fm = painter.fontMetrics()

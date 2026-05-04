@@ -254,17 +254,15 @@ class FeatureSet:
         mask = None
         if feature is not None:
             mask = feature.mask
-            feature.mat = template
         elif mask_function is not None:
             mask = mask_function(template)
 
         if frame_processor is not None:
             search_area = frame_processor(search_area)
 
-        if feature is not None and (
-                feature.mat.shape[1] > search_area.shape[1] or feature.mat.shape[0] > search_area.shape[0]):
+        if template.shape[1] > search_area.shape[1] or template.shape[0] > search_area.shape[0]:
             logger.error(
-                f'feature template {category_name} {box.name if box else ""} size greater than search area {feature.mat.shape} > {search_area.shape}')
+                f'feature template {category_name} {box.name if box else ""} size greater than search area {template.shape} > {search_area.shape}')
 
         scale_factor = 1.0
         if target_height > 0:
@@ -274,6 +272,18 @@ class FeatureSet:
                                       interpolation=cv2.INTER_AREA)
                 if mask is not None:
                     mask = cv2.resize(mask, (template.shape[1], template.shape[0]), interpolation=cv2.INTER_NEAREST)
+
+        # Ensure type compatibility before matchTemplate
+        if search_area.dtype != template.dtype or search_area.ndim != template.ndim:
+            logger.warning(
+                f'Type mismatch for {category_name}: search_area={search_area.shape} {search_area.dtype}, '
+                f'template={template.shape} {template.dtype}')
+            if search_area.dtype != template.dtype:
+                template = template.astype(search_area.dtype)
+            if search_area.ndim == 3 and template.ndim == 2:
+                template = cv2.cvtColor(template, cv2.COLOR_GRAY2BGR)
+            elif search_area.ndim == 2 and template.ndim == 3:
+                search_area = cv2.cvtColor(search_area, cv2.COLOR_GRAY2BGR)
 
         result = cv2.matchTemplate(search_area, template, match_method,
                                    mask=mask)
@@ -634,6 +644,20 @@ def compress_coco(coco_json) -> None:
         return
 
     image_info_map = {img['id']: img for img in data['images']}
+
+    # Sort image_ids by source file modification time (oldest first)
+    # to minimize changes to generated packed images when new images are added
+    def _get_mtime(img_id):
+        info = image_info_map.get(img_id)
+        if info:
+            path = os.path.join(coco_folder, info['file_name'])
+            try:
+                return os.path.getmtime(path)
+            except OSError:
+                pass
+        return float('inf')
+
+    image_ids.sort(key=_get_mtime)
 
     dims_to_img_ids = {}
     
