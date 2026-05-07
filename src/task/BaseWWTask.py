@@ -697,7 +697,7 @@ class BaseWWTask(BaseTask):
                 self._logged_in = True
                 return True
             self.handle_monthly_card()
-            if login_close := self.find_one('login_close', horizontal_variance=0.1, vertical_variance=0.1):
+            if login_close := self.find_one('login_close', horizontal_variance=0.15, vertical_variance=0.1):
                 self.click(login_close, after_sleep=1)
                 self.log_info('关闭公告!')
                 return False

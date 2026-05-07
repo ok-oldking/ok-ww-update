@@ -7,7 +7,7 @@ import numpy as np
 from ok import ConfigOption
 from src.task.process_feature import process_feature
 
-version = "v3.3.17"
+version = "v3.3.18"
 
 
 def calculate_pc_exe_path(running_path):
@@ -144,7 +144,7 @@ config = {
             'github': 'https://github.com/ok-oldking/ok-wuthering-waves',
             'discord': 'https://discord.gg/vVyCatEBgA',
             'sponsor': 'https://afdian.com/a/ok-oldking',
-            'share': 'OK-WW 夸克网盘下载：https://pan.quark.cn/s/75b55ef72a34 GitHub下载: https://github.com/ok-oldking/ok-wuthering-waves/releases/latest',
+            'share': 'OK-WW 百度网盘 https://pan.baidu.com/s/102Mh1djq2B1T-cIJhct9Gg?pwd=okww 夸克网盘 https://pan.quark.cn/s/418018ddf7a0 不定期更新最新版 GitHub下载: https://github.com/ok-oldking/ok-wuthering-waves/releases/latest',
             'faq': 'https://cnb.cool/ok-oldking/ok-wuthering-waves/-/blob/main/README.md',
             'qq_group': 'https://qm.qq.com/q/QUMHZ9IJYO',
             'qq_channel': 'https://pd.qq.com/s/djmm6l44y',
