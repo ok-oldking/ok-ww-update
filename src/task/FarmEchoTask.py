@@ -27,11 +27,13 @@ class FarmEchoTask(WWOneTimeTask, BaseCombatTask):
             'Combat Wait Time': 0,
             'Echo Pickup Method': 'Walk',
             'Use Liberation': True,
+            'Switch to Healer after Combat': True,
         })
         self.config_description.update({
             'Boss': 'Select boss profile (includes Combat Wait Time)',
             'Combat Wait Time': 'Wait time before each combat (seconds), overrides Boss profile if set',
             'Use Liberation': 'Do not use Liberation to Save Time',
+            'Switch to Healer after Combat': 'Better Chance to Keep Character Alive',
         })
         self.find_echo_method = ['Yolo', 'Run in Circle', 'Walk']
         self.config_type['Echo Pickup Method'] = {'type': "drop_down", 'options': self.find_echo_method}
@@ -75,6 +77,8 @@ class FarmEchoTask(WWOneTimeTask, BaseCombatTask):
         self.execute_treasure_hunt()
         self.is_revived = True
         return True
+
+
 
     def run(self):
         WWOneTimeTask.run(self)
@@ -141,6 +145,7 @@ class FarmEchoTask(WWOneTimeTask, BaseCombatTask):
             self.combat_once(wait_combat_time=0, raise_if_not_found=False)
             if self.is_revived:
                 continue
+
             if self.pick_echo():
                 logger.info(f'farm echo on the face')
                 dropped = True
