@@ -1003,7 +1003,7 @@ class BaseWWTask(BaseTask):
     def click_on_book_target(self, serial_number: int, total_number: int):
         if serial_number < 1 or serial_number > total_number:
             raise Exception(f'Index out of range, max is {total_number}')
-        self.sleep(0.2)
+        self.sleep(1)
 
         # scroll region coordinates
         scroll_x = 3737 / 3840
@@ -1011,7 +1011,7 @@ class BaseWWTask(BaseTask):
         scroll_y_bottom = 1899 / 2160
 
         visible_rows = 5
-        row_pitch = (1809 - 580) /4 / 2160 
+        row_pitch = (1809 - 580) / 4 / 2160
 
         # proceed button dectect region
         top_proceed_box_y1 = 0.21
@@ -1022,7 +1022,7 @@ class BaseWWTask(BaseTask):
         # double drop event changes the page layout
         min_height = self.height_of_screen(50 / 2160)
         double = find_color_rectangles(self.frame, double_drop_color, 3, min_height,
-                                       box = self.box_of_screen(3719/3840, 424/2160, 3761/3840, 541/2160))
+                                       box=self.box_of_screen(3719 / 3840, 424 / 2160, 3761 / 3840, 541 / 2160))
         if not bool(double):
             logger.info(f'double drop!')
             scroll_y_top = 541 / 2160
@@ -1044,7 +1044,7 @@ class BaseWWTask(BaseTask):
             proceed_box_y2 = bottom_proceed_box_y2
 
         btns = self.find_feature('boss_proceed',
-                                 box=self.box_of_screen(0.94,proceed_box_y1,0.97,proceed_box_y2),
+                                 box=self.box_of_screen(0.94, proceed_box_y1, 0.97, proceed_box_y2),
                                  threshold=0.8)
         if not bool(btns):
             raise Exception("can't find boss_proceed")
@@ -1086,7 +1086,7 @@ class BaseWWTask(BaseTask):
         self.click_box(gray_book_weekly, after_sleep=3)
         btn = self.find_one(Labels.boss_proceed, box=self.box_of_screen(0.91, 0.3, 0.95, 0.41), threshold=0.8)
         if btn is None:
-            self.ensure_main(time_out=10)
+            self.ensure_main(time_out=20)
             return
         self.click_box(btn, after_sleep=1)
         self.wait_click_travel()
