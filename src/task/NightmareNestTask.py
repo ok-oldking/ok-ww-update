@@ -156,3 +156,10 @@ def convert_image_to_negative(img):
     if to_gray:
         _mat = cv2.cvtColor(_mat, cv2.COLOR_GRAY2BGR)
     return _mat
+
+
+from ok import run_task
+from config import config
+
+if __name__ == "__main__":
+    run_task(config, task=NightmareNestTask, debug=True)
