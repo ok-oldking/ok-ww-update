@@ -74,6 +74,7 @@ class DailyTask(WWOneTimeTask, BaseCombatTask):
                 raise
             except Exception as e:
                 self.log_error("NightmareNestTask Failed", e)
+                self.screenshot('NightmareNestTask')
                 self.ensure_main(time_out=180)
         used_stamina, daily_reward_ready = self.open_daily()
         if not daily_reward_ready and used_stamina < 180:

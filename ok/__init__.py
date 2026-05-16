@@ -35,7 +35,7 @@ from ok.device.intercation import DoNothingInteraction, BaseInteraction, Browser
     GenshinInteraction, ForegroundPostMessageInteraction, PyDirectInteraction
 from ok.device.capture import ImageCaptureMethod, BaseCaptureMethod, BrowserCaptureMethod, ADBCaptureMethod, \
     WindowsGraphicsCaptureMethod, BitBltCaptureMethod, NemuIpcCaptureMethod, DesktopDuplicationCaptureMethod, \
-    ImageCaptureMethod
+    ForegroundBitBltCaptureMethod, ImageCaptureMethod
 from ok.task.DiagnosisTask import DiagnosisTask
 from ok.task.task import BaseTask, TriggerTask, FindFeature, OCR
 from ok.feature.Feature import Feature
@@ -217,8 +217,7 @@ class App:
                 og.my_app.on_show_main_window(self.main_window)
 
         self.main_window.show()
-        self.main_window.raise_()
-        self.main_window.activateWindow()
+        self.main_window.bring_to_front()
 
         logger.debug(f'show_main_window end')
 

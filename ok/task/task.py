@@ -479,15 +479,19 @@ class ExecutorOperation:
     def get_global_config_desc(self, option):
         return self.executor.global_config.get_config_desc(option)
 
-    def send_key_down(self, key):
+    def send_key_down(self, key, after_sleep=0):
         key = self.validate_key(key)
         self.executor.reset_scene()
         self.executor.interaction.send_key_down(key)
+        if after_sleep > 0:
+            self.sleep(after_sleep)
 
-    def send_key_up(self, key):
+    def send_key_up(self, key, after_sleep=0):
         key = self.validate_key(key)
         self.executor.reset_scene()
         self.executor.interaction.send_key_up(key)
+        if after_sleep > 0:
+            self.sleep(after_sleep)
 
     def wait_until(self, condition, time_out=0, pre_action=None, post_action=None, settle_time=-1,
                    raise_if_not_found=False):
@@ -1146,12 +1150,20 @@ class BaseTask(OCR):
         else:
             return "Not Started"
 
+    def ensure_capture(self, config=None):
+        if config is None:
+            config = self.capture_config
+        if config:
+            return self.executor.device_manager.ensure_capture(config)
+
+    def update_capture(self, config):
+        return self.executor.device_manager.update_capture(config)
+
     def enable(self):
         if not self._enabled:
             self._enabled = True
             self.info_clear()
-            if self.capture_config:
-                self.executor.device_manager.ensure_capture(self.capture_config)
+            self.ensure_capture()
             self.executor.interaction.on_run()
             logger.info(f'enabled task {self}')
         communicate.task.emit(self)

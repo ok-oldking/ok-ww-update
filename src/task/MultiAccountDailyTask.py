@@ -150,7 +150,15 @@ class MultiAccountDailyTask(WWOneTimeTask, BaseCombatTask):
         self.log_info(f'正在选择账号：****{suffix}')
         max_retries = 3
         for attempt in range(1, max_retries + 1):
-            self._click_center_offset(270, -43, after_sleep=5)
+            self.ensure_in_front()
+            self.update_capture({
+                'windows': {
+                    'interaction': 'Pynput',
+                    'capture_method': 'ForegroundBitBlt',
+                }
+            })
+            self.sleep(1)
+            self._click_center_offset(270, -43, after_sleep=2)
             self.wait_until(
                 lambda: self._click_account_in_list(pattern),
                 time_out=10, raise_if_not_found=True
@@ -171,5 +179,11 @@ class MultiAccountDailyTask(WWOneTimeTask, BaseCombatTask):
         else:
             self._click_center_offset(0, 95, after_sleep=3)
         self._logged_in = False
+        self.update_capture({
+            'windows': {
+                'interaction': 'PostMessage',
+                'capture_method': ['WGC', 'BitBlt_RenderFull'],
+            }
+        })
         self.ensure_main(time_out=180)
         self.log_info(f'登录成功：****{suffix}')
