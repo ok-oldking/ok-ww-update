@@ -1164,6 +1164,16 @@
             "id": 230,
             "name": "message_dialog",
             "supercategory": ""
+        },
+        {
+            "id": 231,
+            "name": "account_close",
+            "supercategory": ""
+        },
+        {
+            "id": 232,
+            "name": "esc_setting",
+            "supercategory": ""
         }
     ],
     "images": [
@@ -2189,6 +2199,12 @@
             "file_name": "images/39.png",
             "width": 2048,
             "height": 1152
+        },
+        {
+            "id": 242,
+            "file_name": "images/33.png",
+            "width": 1920,
+            "height": 1080
         }
     ],
     "annotations": [
@@ -3401,6 +3417,32 @@
                 36
             ],
             "area": 1800,
+            "iscrowd": 0
+        },
+        {
+            "id": 87,
+            "image_id": 241,
+            "category_id": 231,
+            "bbox": [
+                1307,
+                359,
+                53,
+                60
+            ],
+            "area": 3180,
+            "iscrowd": 0
+        },
+        {
+            "id": 88,
+            "image_id": 242,
+            "category_id": 232,
+            "bbox": [
+                1738,
+                998,
+                75,
+                47
+            ],
+            "area": 3525,
             "iscrowd": 0
         },
         {
