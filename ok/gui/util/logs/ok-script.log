@@ -1,0 +1,96 @@
+2026-05-30 00:00:43,870 INFO MainThread ok:ok-script init 1.0.3, ['E:\\projects\\ok-script\\ok\\gui\\util\\pyappify_startup.py'], pid=54424 config: {'debug': False, 'use_gui': True, 'gui_title': 'pyappify startup update demo', 'gui_icon': ':/icon/icon.ico', 'version': '1.0.3', 'window_size': {'width': 1000, 'height': 800, 'min_width': 600, 'min_height': 450}, 'onetime_tasks': [], 'trigger_tasks': [], 'config_folder': 'configs'}
+2026-05-30 00:00:43,871 INFO MainThread ok:pyappify  app_version:1.0.3, app_profile:None, pyappify_version:None pyappify_upgradeable:False, pyappify_executable:None
+2026-05-30 00:00:43,875 INFO MainThread ok:use_dml result is True
+2026-05-30 00:00:43,876 INFO MainThread ok:SetProcessDpiAwareness 0
+2026-05-30 00:00:43,876 INFO MainThread ok:do_init, config: {'debug': False, 'use_gui': True, 'gui_title': 'pyappify startup update demo', 'gui_icon': ':/icon/icon.ico', 'version': '1.0.3', 'window_size': {'width': 1000, 'height': 800, 'min_width': 600, 'min_height': 450}, 'onetime_tasks': [], 'trigger_tasks': [], 'config_folder': 'configs'}
+2026-05-30 00:00:43,876 INFO MainThread DeviceManager:__init__ start
+2026-05-30 00:00:43,878 INFO MainThread DeviceManager:__init__ end
+2026-05-30 00:00:43,892 INFO MainThread TaskExecutor:install ocr translations error for en_US
+2026-05-30 00:00:43,918 INFO MainThread app:No translation available for <PySide6.QtCore.QLocale()/* English, Latin, United States */ at 0x00000150381535C0>, falling back to English/default.
+2026-05-30 00:00:43,934 INFO MainThread ok:do_init, end
+2026-05-30 00:00:43,934 INFO MainThread ok:OK start id:1443410768672 pid:54424
+2026-05-30 00:00:44,012 INFO MainThread MainWindow:main window __init__
+2026-05-30 00:00:44,471 ERROR MainThread ok:install translations error for en_US 
+2026-05-30 00:00:44,542 INFO MainThread MainWindow:main window __init__ done
+2026-05-30 00:00:44,557 INFO MainThread MainWindow:Window has fully displayed {'task': 0, 'exit': False, 'headless': False}
+2026-05-30 00:00:44,660 INFO MainThread ok:app.exec()
+2026-05-30 00:00:44,804 INFO MainThread MainWindow:show startup version change on about tab update success 1.0.2 -> 1.0.3
+2026-05-30 00:00:45,559 INFO global MainWindow:Window geometry updated in ok_config {'window_x': 353, 'window_y': 133, 'window_width': 1000, 'window_height': 800, 'window_maximized': False, 'navigation_expanded': False, 'use_overlay': False, 'show_overlay_logs': True}
+2026-05-30 00:00:50,116 INFO MainThread ok:SIGINT received, quitting
+2026-05-30 00:00:50,117 INFO MainThread handler:handler stop raised exception global
+2026-05-30 00:00:50,118 INFO MainThread handler:handler stop raised exception ok.gui.StartController
+2026-05-30 00:00:50,118 INFO MainThread handler:handler stop raised exception StartCard
+2026-05-30 00:00:50,118 INFO MainThread handler:handler stop raised exception RefreshAdb
+2026-05-30 00:00:50,120 INFO MainThread MainWindow:Window closed exit_event.is_set
+2026-05-30 00:00:52,784 INFO MainThread ok:ok-script init 1.0.3, ['E:\\projects\\ok-script\\ok\\gui\\util\\pyappify_startup.py'], pid=38876 config: {'debug': False, 'use_gui': True, 'gui_title': 'pyappify startup update demo', 'gui_icon': ':/icon/icon.ico', 'version': '1.0.3', 'window_size': {'width': 1000, 'height': 800, 'min_width': 600, 'min_height': 450}, 'onetime_tasks': [], 'trigger_tasks': [], 'config_folder': 'configs'}
+2026-05-30 00:00:52,785 INFO MainThread ok:pyappify  app_version:1.0.3, app_profile:None, pyappify_version:None pyappify_upgradeable:False, pyappify_executable:None
+2026-05-30 00:00:52,789 INFO MainThread ok:use_dml result is True
+2026-05-30 00:00:52,790 INFO MainThread ok:SetProcessDpiAwareness 0
+2026-05-30 00:00:52,790 INFO MainThread ok:do_init, config: {'debug': False, 'use_gui': True, 'gui_title': 'pyappify startup update demo', 'gui_icon': ':/icon/icon.ico', 'version': '1.0.3', 'window_size': {'width': 1000, 'height': 800, 'min_width': 600, 'min_height': 450}, 'onetime_tasks': [], 'trigger_tasks': [], 'config_folder': 'configs'}
+2026-05-30 00:00:52,790 INFO MainThread DeviceManager:__init__ start
+2026-05-30 00:00:52,792 INFO MainThread DeviceManager:__init__ end
+2026-05-30 00:00:52,806 INFO MainThread TaskExecutor:install ocr translations error for en_US
+2026-05-30 00:00:52,834 INFO MainThread app:No translation available for <PySide6.QtCore.QLocale()/* English, Latin, United States */ at 0x0000019CFA6DB300>, falling back to English/default.
+2026-05-30 00:00:52,854 INFO MainThread ok:do_init, end
+2026-05-30 00:00:52,854 INFO MainThread ok:OK start id:1773089878816 pid:38876
+2026-05-30 00:00:52,939 INFO MainThread MainWindow:main window __init__
+2026-05-30 00:00:53,678 ERROR MainThread ok:install translations error for en_US 
+2026-05-30 00:00:53,752 INFO MainThread MainWindow:main window __init__ done
+2026-05-30 00:00:53,772 INFO MainThread MainWindow:Window has fully displayed {'task': 0, 'exit': False, 'headless': False}
+2026-05-30 00:00:53,874 INFO MainThread ok:app.exec()
+2026-05-30 00:00:54,031 INFO MainThread MainWindow:show startup version change on about tab update success 1.0.2 -> 1.0.3
+2026-05-30 00:00:54,772 INFO global MainWindow:Window geometry updated in ok_config {'window_x': 353, 'window_y': 133, 'window_width': 1000, 'window_height': 800, 'window_maximized': False, 'navigation_expanded': False, 'use_overlay': False, 'show_overlay_logs': True}
+2026-05-30 00:02:52,492 INFO MainThread MainWindow:Window closed exit_event.is not set False
+2026-05-30 00:02:52,493 INFO MainThread handler:handler stop raised exception ok.gui.StartController
+2026-05-30 00:02:52,493 INFO MainThread handler:handler stop raised exception global
+2026-05-30 00:02:52,493 INFO MainThread handler:handler stop raised exception StartCard
+2026-05-30 00:02:52,493 INFO MainThread handler:handler stop raised exception RefreshAdb
+2026-05-30 00:02:52,494 INFO MainThread TaskExecutor:Executor destroy
+2026-05-30 00:03:03,097 INFO MainThread ok:ok-script init 1.0.3, ['E:\\projects\\ok-script\\ok\\gui\\util\\pyappify_startup.py'], pid=26984 config: {'debug': False, 'use_gui': True, 'gui_title': 'pyappify startup update demo', 'gui_icon': ':/icon/icon.ico', 'version': '1.0.3', 'window_size': {'width': 1000, 'height': 800, 'min_width': 600, 'min_height': 450}, 'onetime_tasks': [], 'trigger_tasks': [], 'config_folder': 'configs'}
+2026-05-30 00:03:03,098 INFO MainThread ok:pyappify  app_version:1.0.3, app_profile:None, pyappify_version:None pyappify_upgradeable:False, pyappify_executable:None
+2026-05-30 00:03:03,102 INFO MainThread ok:use_dml result is True
+2026-05-30 00:03:03,102 INFO MainThread ok:SetProcessDpiAwareness 0
+2026-05-30 00:03:03,102 INFO MainThread ok:do_init, config: {'debug': False, 'use_gui': True, 'gui_title': 'pyappify startup update demo', 'gui_icon': ':/icon/icon.ico', 'version': '1.0.3', 'window_size': {'width': 1000, 'height': 800, 'min_width': 600, 'min_height': 450}, 'onetime_tasks': [], 'trigger_tasks': [], 'config_folder': 'configs'}
+2026-05-30 00:03:03,102 INFO MainThread DeviceManager:__init__ start
+2026-05-30 00:03:03,104 INFO MainThread DeviceManager:__init__ end
+2026-05-30 00:03:03,119 INFO MainThread TaskExecutor:install ocr translations error for en_US
+2026-05-30 00:03:03,149 INFO MainThread app:No translation available for <PySide6.QtCore.QLocale()/* English, Latin, United States */ at 0x000002348BDC3700>, falling back to English/default.
+2026-05-30 00:03:03,166 INFO MainThread ok:do_init, end
+2026-05-30 00:03:03,166 INFO MainThread ok:OK start id:2426215953184 pid:26984
+2026-05-30 00:03:03,261 INFO MainThread MainWindow:main window __init__
+2026-05-30 00:03:03,798 ERROR MainThread ok:install translations error for en_US 
+2026-05-30 00:03:03,878 INFO MainThread MainWindow:main window __init__ done
+2026-05-30 00:03:03,893 INFO MainThread MainWindow:Window has fully displayed {'task': 0, 'exit': False, 'headless': False}
+2026-05-30 00:03:03,981 INFO MainThread ok:app.exec()
+2026-05-30 00:03:04,150 INFO MainThread MainWindow:show startup version change on about tab update success 1.0.2 -> 1.0.3
+2026-05-30 00:03:04,893 INFO global MainWindow:Window geometry updated in ok_config {'window_x': 353, 'window_y': 133, 'window_width': 1000, 'window_height': 800, 'window_maximized': False, 'navigation_expanded': False, 'use_overlay': False, 'show_overlay_logs': True}
+2026-05-30 00:03:09,400 INFO MainThread MainWindow:Window closed exit_event.is not set False
+2026-05-30 00:03:09,400 INFO MainThread handler:handler stop raised exception RefreshAdb
+2026-05-30 00:03:09,400 INFO MainThread handler:handler stop raised exception ok.gui.StartController
+2026-05-30 00:03:09,400 INFO MainThread handler:handler stop raised exception global
+2026-05-30 00:03:09,400 INFO MainThread handler:handler stop raised exception StartCard
+2026-05-30 00:03:09,400 INFO MainThread TaskExecutor:Executor destroy
+2026-05-30 00:04:31,477 INFO MainThread ok:ok-script init 1.0.3, ['E:\\projects\\ok-script\\ok\\gui\\util\\pyappify_startup.py'], pid=38900 config: {'debug': False, 'use_gui': True, 'gui_title': 'pyappify startup update demo', 'gui_icon': ':/icon/icon.ico', 'version': '1.0.3', 'window_size': {'width': 1000, 'height': 800, 'min_width': 600, 'min_height': 450}, 'onetime_tasks': [], 'trigger_tasks': [], 'config_folder': 'configs'}
+2026-05-30 00:04:31,479 INFO MainThread ok:pyappify  app_version:1.0.3, app_profile:None, pyappify_version:None pyappify_upgradeable:False, pyappify_executable:None
+2026-05-30 00:04:31,484 INFO MainThread ok:use_dml result is True
+2026-05-30 00:04:31,484 INFO MainThread ok:SetProcessDpiAwareness 0
+2026-05-30 00:04:31,485 INFO MainThread ok:do_init, config: {'debug': False, 'use_gui': True, 'gui_title': 'pyappify startup update demo', 'gui_icon': ':/icon/icon.ico', 'version': '1.0.3', 'window_size': {'width': 1000, 'height': 800, 'min_width': 600, 'min_height': 450}, 'onetime_tasks': [], 'trigger_tasks': [], 'config_folder': 'configs'}
+2026-05-30 00:04:31,485 INFO MainThread DeviceManager:__init__ start
+2026-05-30 00:04:31,486 INFO MainThread DeviceManager:__init__ end
+2026-05-30 00:04:31,502 INFO MainThread TaskExecutor:install ocr translations error for en_US
+2026-05-30 00:04:31,531 INFO MainThread app:No translation available for <PySide6.QtCore.QLocale()/* English, Latin, United States */ at 0x000001555FB63A80>, falling back to English/default.
+2026-05-30 00:04:31,548 INFO MainThread ok:do_init, end
+2026-05-30 00:04:31,548 INFO MainThread ok:OK start id:1465553821648 pid:38900
+2026-05-30 00:04:31,630 INFO MainThread MainWindow:main window __init__
+2026-05-30 00:04:32,194 ERROR MainThread ok:install translations error for en_US 
+2026-05-30 00:04:32,261 INFO MainThread MainWindow:main window __init__ done
+2026-05-30 00:04:32,277 INFO MainThread MainWindow:Window has fully displayed {'task': 0, 'exit': False, 'headless': False}
+2026-05-30 00:04:32,374 INFO MainThread ok:app.exec()
+2026-05-30 00:04:32,525 INFO MainThread MainWindow:show startup version change on about tab update success 1.0.2 -> 1.0.3
+2026-05-30 00:04:33,276 INFO global MainWindow:Window geometry updated in ok_config {'window_x': 353, 'window_y': 133, 'window_width': 1000, 'window_height': 800, 'window_maximized': False, 'navigation_expanded': False, 'use_overlay': False, 'show_overlay_logs': True}
+2026-05-30 00:04:34,172 INFO MainThread MainWindow:Window closed exit_event.is not set False
+2026-05-30 00:04:34,172 INFO MainThread handler:handler stop raised exception global
+2026-05-30 00:04:34,173 INFO MainThread handler:handler stop raised exception ok.gui.StartController
+2026-05-30 00:04:34,173 INFO MainThread handler:handler stop raised exception RefreshAdb
+2026-05-30 00:04:34,173 INFO MainThread handler:handler stop raised exception StartCard
+2026-05-30 00:04:34,173 INFO MainThread TaskExecutor:Executor destroy

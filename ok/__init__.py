@@ -77,7 +77,7 @@ class App:
         self.ok_config = Config('_ok', {'window_x': -1, 'window_y': -1, 'window_width': -1, 'window_height': -1,
                                         'window_maximized': False, 'navigation_expanded': True,
                                         'use_overlay': False, 'show_overlay_logs': True})
-        communicate.quit.connect(self.app.quit)
+        communicate.quit.connect(self.quit)
 
         self.about = self.config.get('about')
         self.title = self.config.get('gui_title')
@@ -86,14 +86,6 @@ class App:
         self.version = self.config.get('version')
         self.app.setApplicationVersion(self.version)
         self.debug = self.config.get('debug', False)
-        if self.config.get(
-                'git_update') and not pyappify.app_version and self.version != "dev" and not os.path.exists(
-            '.venv'):
-            from ok.update.GitUpdater import GitUpdater
-            self.updater = GitUpdater(self.config, exit_event)
-        else:
-            self.updater = None
-
         logger.debug(f'locale name {self.locale.name()}')
 
         self.loading_window = None
@@ -261,6 +253,7 @@ class HeadlessApp:
         self.exit_event = exit_event
         self.po_translation = None
         self.to_translate = None
+        communicate.quit.connect(self.quit)
 
         from ok.gui.common.config import cfg
         self.locale = cfg.get(cfg.language).value
