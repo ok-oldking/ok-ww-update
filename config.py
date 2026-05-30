@@ -5,7 +5,7 @@ from pathlib import Path
 from ok import Box, ConfigOption
 from src.task.process_feature import process_feature
 
-version = "v3.3.62"
+version = "v3.3.63"
 
 
 def calculate_pc_exe_path(running_path):
@@ -154,4 +154,10 @@ config = {
         ["src.task.MouseResetTask", "MouseResetTask"],
         ["src.task.FastTravelTask", "FastTravelTask"],
     ], 'scene': ["src.scene.WWScene", "WWScene"],
+    'update_pyappify': {
+        'to_version': '1.1.3',
+        'zip_url': 'https://github.com/ok-oldking/ok-wuthering-waves/releases/download/v3.3.60/ok-ww-win32.zip',
+        'sha256': '89465b720ffcba46d5c6b71409835a9bb2d9adcf9c6f7d52d8e940a0e915446e',
+    }
+
 }
