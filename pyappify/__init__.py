@@ -8,6 +8,7 @@ import shutil
 import urllib.request
 import zipfile
 import threading
+import time
 
 app_version = os.environ.get("PYAPPIFY_APP_VERSION")
 app_starting_version = os.environ.get("PYAPPIFY_APP_STARTING_VERSION") or app_version
@@ -78,9 +79,66 @@ def kill_pyappify():
         log.info(f"Attempting to terminate process with PID: {pid}")
         try:
             os.kill(pid, signal.SIGTERM)
+            if not _wait_for_process_exit(pid):
+                log.warning(f"Timed out waiting for process with PID {pid} to exit.")
         except Exception as e:
             log.error(f"Failed to terminate process with PID {pid}: {e}")
             pass
+
+
+def _wait_for_process_exit(process_pid, timeout=30):
+    if sys.platform == "win32" and ctypes:
+        synchronize = 0x00100000
+        wait_timeout = 0x00000102
+        wait_failed = 0xFFFFFFFF
+        ctypes.windll.kernel32.OpenProcess.argtypes = (
+            ctypes.c_uint,
+            ctypes.c_bool,
+            ctypes.c_ulong,
+        )
+        ctypes.windll.kernel32.OpenProcess.restype = ctypes.c_void_p
+        ctypes.windll.kernel32.WaitForSingleObject.argtypes = (
+            ctypes.c_void_p,
+            ctypes.c_uint,
+        )
+        ctypes.windll.kernel32.WaitForSingleObject.restype = ctypes.c_uint
+        ctypes.windll.kernel32.CloseHandle.argtypes = (ctypes.c_void_p,)
+        ctypes.windll.kernel32.CloseHandle.restype = ctypes.c_bool
+        handle = ctypes.windll.kernel32.OpenProcess(synchronize, False, process_pid)
+        if handle:
+            try:
+                result = ctypes.windll.kernel32.WaitForSingleObject(
+                    handle, int(timeout * 1000)
+                )
+                if result == wait_failed:
+                    return False
+                return result != wait_timeout
+            finally:
+                ctypes.windll.kernel32.CloseHandle(handle)
+
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        try:
+            os.kill(process_pid, 0)
+        except OSError:
+            return True
+        time.sleep(0.1)
+    return False
+
+
+def _replace_executable(source_path, target_path, timeout=30):
+    deadline = time.monotonic() + timeout
+    last_error = None
+    while True:
+        try:
+            shutil.move(source_path, target_path)
+            return
+        except PermissionError as e:
+            last_error = e
+            if time.monotonic() >= deadline:
+                raise last_error
+            time.sleep(0.25)
+
 
 def hide_pyappify():
     if pid:
@@ -154,7 +212,7 @@ def upgrade(to_version, executable_sha256, executable_zip_urls, stop_event=None)
                 return
 
             kill_pyappify()
-            shutil.move(found_executable_path, pyappify_executable)
+            _replace_executable(found_executable_path, pyappify_executable)
             log.info(f"pyappify Upgrade success")
         except Exception as e:
             log.error(f"pyappify Upgrade failed: {e}")
