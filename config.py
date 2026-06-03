@@ -7,7 +7,7 @@ from qfluentwidgets import FluentIcon
 from ok import Box, ConfigOption
 from src.task.process_feature import process_feature
 
-version = "v3.3.70"
+version = "v3.3.72"
 
 
 def calculate_pc_exe_path(running_path):
@@ -51,6 +51,7 @@ config = {
     'blur_area': blur_area,
     'gui_icon': 'icon.png',
     'global_configs': [key_config_option, char_config_option, monthly_card_config_option],
+    'custom_tabs': [["src.gui.CharacterCodeTab", "CharacterCodeTab"]],
     'ocr': {
         'lib': 'onnxocr',
         'auto_simplify': True,
