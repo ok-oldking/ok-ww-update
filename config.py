@@ -7,7 +7,7 @@ from qfluentwidgets import FluentIcon
 from ok import Box, ConfigOption
 from src.task.process_feature import process_feature
 
-version = "v3.3.74"
+version = "v3.3.75-beta.1"
 
 
 def calculate_pc_exe_path(running_path):
@@ -75,7 +75,7 @@ config = {
     },
     'windows': {  # required  when supporting windows game
         'top_hwnd_class': [re.compile('CAgreementDlg'), re.compile('CLoginDlg_P_'),
-                           'CefBrowserWindow', 'Chrome_RenderWidgetHostHWND',
+                           'CefBrowserWindow', 'Chrome_RenderWidgetHostHWND', '#32770',
                            re.compile('CNativeLoginDlg'), 'Static', 'ComboBox', 'ComboLBox', 'Button'
                            ],
         'calculate_pc_exe_path': calculate_pc_exe_path,
