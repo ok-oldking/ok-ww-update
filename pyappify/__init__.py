@@ -5,6 +5,7 @@ import hashlib
 import json
 import logging
 import shutil
+import subprocess
 import urllib.request
 import zipfile
 import threading
@@ -50,40 +51,63 @@ def _get_logger():
     return _console_logger
 
 
-def minimize_window_by_pid(pid):
+def _find_visible_window_by_pid(process_pid):
     if not ctypes or sys.platform != "win32":
-        return False
+        return None
 
     found_hwnd = []
-    EnumWindowsProc = ctypes.WINFUNCTYPE(ctypes.c_bool, ctypes.POINTER(ctypes.c_int), ctypes.POINTER(ctypes.c_int))
+    EnumWindowsProc = ctypes.WINFUNCTYPE(ctypes.c_bool, ctypes.c_void_p, ctypes.c_void_p)
 
     def enum_windows_callback(hwnd, lParam):
         owner_pid = ctypes.c_ulong()
         ctypes.windll.user32.GetWindowThreadProcessId(hwnd, ctypes.byref(owner_pid))
-        if owner_pid.value == pid and ctypes.windll.user32.IsWindowVisible(hwnd):
+        if owner_pid.value == process_pid and ctypes.windll.user32.IsWindowVisible(hwnd):
             found_hwnd.append(hwnd)
             return False
         return True
 
     ctypes.windll.user32.EnumWindows(EnumWindowsProc(enum_windows_callback), 0)
 
-    if found_hwnd:
-        ctypes.windll.user32.ShowWindow(found_hwnd[0], 6)
+    return found_hwnd[0] if found_hwnd else None
+
+
+def minimize_window_by_pid(pid):
+    hwnd = _find_visible_window_by_pid(pid)
+    if hwnd:
+        ctypes.windll.user32.ShowWindow(hwnd, 6)
         return True
 
     return False
 
-def kill_pyappify():
+
+def bring_window_to_front_by_pid(pid):
+    hwnd = _find_visible_window_by_pid(pid)
+    if hwnd:
+        ctypes.windll.user32.ShowWindow(hwnd, 9)
+        return bool(ctypes.windll.user32.SetForegroundWindow(hwnd))
+
+    return False
+
+
+def kill_pyappify(timeout=30):
     if pid:
         log = _get_logger()
         log.info(f"Attempting to terminate process with PID: {pid}")
         try:
             os.kill(pid, signal.SIGTERM)
-            if not _wait_for_process_exit(pid):
+            if not _wait_for_process_exit(pid, timeout):
                 log.warning(f"Timed out waiting for process with PID {pid} to exit.")
+                return False
+            log.info(f'_wait_for_process_exit success {pid}')
+            return True
         except Exception as e:
             log.error(f"Failed to terminate process with PID {pid}: {e}")
-            pass
+            return False
+    return False
+
+
+def kill_pyappify_exe(timeout=30):
+    return kill_pyappify(timeout)
 
 
 def _wait_for_process_exit(process_pid, timeout=30):
@@ -124,6 +148,74 @@ def _wait_for_process_exit(process_pid, timeout=30):
             return True
         time.sleep(0.1)
     return False
+
+
+def _is_process_running(process_pid):
+    if not process_pid:
+        return False
+
+    if sys.platform == "win32" and ctypes:
+        synchronize = 0x00100000
+        wait_timeout = 0x00000102
+        ctypes.windll.kernel32.OpenProcess.argtypes = (
+            ctypes.c_uint,
+            ctypes.c_bool,
+            ctypes.c_ulong,
+        )
+        ctypes.windll.kernel32.OpenProcess.restype = ctypes.c_void_p
+        ctypes.windll.kernel32.WaitForSingleObject.argtypes = (
+            ctypes.c_void_p,
+            ctypes.c_uint,
+        )
+        ctypes.windll.kernel32.WaitForSingleObject.restype = ctypes.c_uint
+        ctypes.windll.kernel32.CloseHandle.argtypes = (ctypes.c_void_p,)
+        ctypes.windll.kernel32.CloseHandle.restype = ctypes.c_bool
+        handle = ctypes.windll.kernel32.OpenProcess(synchronize, False, process_pid)
+        if not handle:
+            return False
+        try:
+            return ctypes.windll.kernel32.WaitForSingleObject(handle, 0) == wait_timeout
+        finally:
+            ctypes.windll.kernel32.CloseHandle(handle)
+
+    try:
+        os.kill(process_pid, 0)
+    except OSError:
+        return False
+    return True
+
+
+def show_pyappify(args=None, cwd=None, env=None):
+    global pid
+
+    log = _get_logger()
+    if _is_process_running(pid):
+        log.info(f"PyAppify is already running with PID: {pid}")
+        bring_window_to_front_by_pid(pid)
+        return pid
+
+    if not pyappify_executable:
+        log.error("PYAPPIFY_EXECUTABLE is not configured.")
+        return None
+
+    command = [pyappify_executable]
+    if args:
+        if isinstance(args, str):
+            command.append(args)
+        else:
+            command.extend(args)
+
+    try:
+        process = subprocess.Popen(
+            command,
+            cwd=cwd or os.path.dirname(pyappify_executable) or None,
+            env=env,
+        )
+        pid = process.pid
+        return pid
+    except Exception as e:
+        log.error(f"Failed to start PyAppify executable {pyappify_executable}: {e}")
+        return None
 
 
 def _replace_executable(source_path, target_path, timeout=30):
