@@ -9,7 +9,7 @@ from qfluentwidgets import FluentIcon
 from ok import Box, ConfigOption
 from src.task.process_feature import process_feature
 
-version = "v3.4.8-beta.2"
+version = "v3.4.8-beta.3"
 
 
 def calculate_pc_exe_path(running_path):
@@ -31,6 +31,7 @@ key_config_option = ConfigOption('Game Hotkey', {
     'Jump Key': 'space',
     'Dodge Key': 'lshift',
     'Wheel Key': 'tab',
+    'Guidebook Key': 'f2',
 }, description='In Game Hotkey for Skills', show_at_tab=True, icon=FluentIcon.GAME)
 
 char_config_option = ConfigOption('Character Config', {
