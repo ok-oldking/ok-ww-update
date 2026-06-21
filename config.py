@@ -9,7 +9,7 @@ from qfluentwidgets import FluentIcon
 from ok import Box, ConfigOption
 from src.task.process_feature import process_feature
 
-version = "v3.4.10-beta.1"
+version = "v3.4.10"
 
 
 def calculate_pc_exe_path(running_path):
