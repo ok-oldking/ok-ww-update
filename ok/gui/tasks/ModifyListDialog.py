@@ -8,6 +8,9 @@ from qfluentwidgets import (
 from ok import og
 
 
+SHOW_SEARCH_OPTIONS_THRESHOLD = 20
+
+
 class ModifyListDialog(MessageBoxBase):
     list_modified = Signal(list)
 
@@ -19,6 +22,8 @@ class ModifyListDialog(MessageBoxBase):
         self.list_widget = ListWidget()
         self.option_buttons = {}
         self.source_by_display = {}
+        self.option_search_box = None
+        self._options_container = None
 
         if self.options_available is None:
             self.list_widget.addItems(self.original_items)
@@ -58,13 +63,20 @@ class ModifyListDialog(MessageBoxBase):
             available_layout = QVBoxLayout()
             available_layout.addWidget(SubtitleLabel(self.tr("Available Options"), self))
             available_layout.addWidget(BodyLabel(self.tr("Click an option to add it."), self))
+            if len(self.options_available) > SHOW_SEARCH_OPTIONS_THRESHOLD:
+                self.option_search_box = LineEdit(self)
+                self.option_search_box.setClearButtonEnabled(True)
+                self.option_search_box.setPlaceholderText(self.tr("Search options..."))
+                self.option_search_box.textChanged.connect(self.filter_available_options)
+                available_layout.addWidget(self.option_search_box)
             available_scroll_area = QScrollArea(self)
             available_scroll_area.setWidgetResizable(True)
             available_scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
             available_scroll_area.setFrameShape(QScrollArea.NoFrame)
             available_scroll_area.setStyleSheet("QScrollArea { background-color: transparent; border: none; }")
             available_scroll_area.viewport().setStyleSheet("background-color: transparent;")
-            available_scroll_area.setWidget(self._create_available_options_widget())
+            self._options_container = self._create_available_options_widget()
+            available_scroll_area.setWidget(self._options_container)
             available_layout.addWidget(available_scroll_area, stretch=1)
 
             selected_layout = QVBoxLayout()
@@ -103,7 +115,7 @@ class ModifyListDialog(MessageBoxBase):
     def _create_available_options_widget(self):
         widget = QWidget()
         widget.setStyleSheet("background-color: transparent;")
-        layout = FlowLayout(widget, False)
+        layout = FlowLayout(widget, False, isTight=True)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setHorizontalSpacing(10)
         layout.setVerticalSpacing(10)
@@ -139,6 +151,22 @@ class ModifyListDialog(MessageBoxBase):
         }
         for option, button in self.option_buttons.items():
             button.setEnabled(self.allow_duplication or og.app.tr(option) not in selected_options)
+
+    def filter_available_options(self, text):
+        keyword = text.strip().casefold()
+        for option, button in self.option_buttons.items():
+            display_text = og.app.tr(option)
+            button.setVisible(
+                not keyword
+                or keyword in option.casefold()
+                or keyword in display_text.casefold()
+            )
+        # Force the FlowLayout to recalculate and skip hidden widgets (isTight=True)
+        if self._options_container is not None:
+            layout = self._options_container.layout()
+            if layout is not None:
+                layout.setGeometry(self._options_container.geometry())
+                self._options_container.update()
 
     def _wrap_dialog_buttons(self):
         self.yesButton.setFixedWidth(self.yesButton.sizeHint().width() * 2)
