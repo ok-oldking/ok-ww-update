@@ -11,12 +11,32 @@ import zipfile
 import threading
 import time
 
+from .app_config import (
+    UPDATE_METHOD_AUTO,
+    UPDATE_METHOD_AUTO_PRE_RELEASE,
+    UPDATE_METHOD_MANUAL,
+    add_app_config_listener,
+    configure_app_json,
+    get_app_config,
+    get_app_json_path,
+    get_auto_start,
+    get_update_method,
+    remove_app_config_listener,
+    set_auto_start,
+    set_update_method,
+    start_app_config_watcher,
+    stop_app_config_watcher,
+    update_app_config,
+)
+
 app_version = os.environ.get("PYAPPIFY_APP_VERSION")
 app_starting_version = os.environ.get("PYAPPIFY_APP_STARTING_VERSION") or app_version
 update_note = os.environ.get("PYAPPIFY_UPDATE_NOTE")
 app_profile = os.environ.get("PYAPPIFY_APP_PROFILE")
+app_locale = os.environ.get("PYAPPIFY_LOCALE") or "en"
 pyappify_version = os.environ.get("PYAPPIFY_VERSION")
 pyappify_executable = os.environ.get("PYAPPIFY_EXECUTABLE")
+app_json_path = configure_app_json(os.environ.get("PYAPPIFY_APP_JSON_PATH"))
 
 pyappify_upgradeable = os.environ.get("PYAPPIFY_UPGRADEABLE") == '1'
 logger = None
@@ -347,6 +367,10 @@ def get_update_notes():
 
 def get_update_note():
     return get_update_notes()
+
+
+def get_locale():
+    return app_locale
 
 
 def is_greater_version(version1, version2):
