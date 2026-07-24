@@ -10,7 +10,7 @@ from qfluentwidgets import FluentIcon
 from ok import Box, ConfigOption
 from src.task.process_feature import process_feature
 
-version = "v3.5.13"
+version = "v3.5.14"
 
 
 def calculate_pc_exe_path(running_path):
@@ -33,7 +33,10 @@ key_config_option = ConfigOption('Game Hotkey', {
     'Dodge Key': 'lshift',
     'Wheel Key': 'tab',
     'Guidebook Key': 'f2',
-}, description='In Game Hotkey for Skills', show_at_tab=True, icon=FluentIcon.GAME)
+    'Bag Key': 'b',
+}, description='In Game Hotkey for Skills', config_description={
+    'Bag Key': 'In-game hotkey used to open the Bag.',
+}, show_at_tab=True, icon=FluentIcon.GAME)
 
 char_config_option = ConfigOption('Character Config', {
     'Iuno C6': False,
@@ -149,6 +152,7 @@ config = {
         ["src.task.NightmareNestTask", "NightmareNestTask"],
         ["src.task.SimulationTask", "SimulationTask"],
         ["src.task.TacetTask", "TacetTask"],
+        ["src.task.MergeEchoTask", "MergeEchoTask"],
         ["src.task.EnhanceEchoTask", "EnhanceEchoTask"],
         ["src.task.ChangeEchoTask", "ChangeEchoTask"],
         ["src.task.GardenTask", "GardenTask"],
