@@ -10,7 +10,7 @@ from qfluentwidgets import FluentIcon
 from ok import Box, ConfigOption
 from src.task.process_feature import process_feature
 
-version = "v3.5.19-beta.1"
+version = "v3.5.19"
 
 
 def _find_most_recently_run_pc_exe():
@@ -250,7 +250,6 @@ config = {
         ["src.task.DailyTask", "DailyTask"],
         ["src.task.MultiAccountDailyTask", "MultiAccountDailyTask"],
         ["src.task.FarmEchoTask", "FarmEchoTask"],
-        ["src.task.AutoRogueTask", "AutoRogueTask"],
         ["src.task.ForgeryTask", "ForgeryTask"],
         ["src.task.NightmareNestTask", "NightmareNestTask"],
         ["src.task.SimulationTask", "SimulationTask"],
