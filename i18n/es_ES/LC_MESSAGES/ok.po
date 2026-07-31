@@ -1082,3 +1082,9 @@ msgstr "Tarea diaria completada"
 
 msgid "Daily task completed, start teleport to farm 4C echo"
 msgstr "Tarea diaria completada; iniciando teletransporte para farmear ecos de coste 4"
+
+msgid "can't find dialog right button"
+msgstr "No se puede encontrar el botón derecho del diálogo"
+
+msgid "can't find dialog left button"
+msgstr "No se puede encontrar el botón izquierdo del diálogo"

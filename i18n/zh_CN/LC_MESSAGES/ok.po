@@ -1207,3 +1207,9 @@ msgstr "每日任务已完成"
 
 msgid "Daily task completed, start teleport to farm 4C echo"
 msgstr "每日任务已完成，开始传送并刷取4C声骸"
+
+msgid "can't find dialog right button"
+msgstr "找不到对话框右侧按钮"
+
+msgid "can't find dialog left button"
+msgstr "找不到对话框左侧按钮"
