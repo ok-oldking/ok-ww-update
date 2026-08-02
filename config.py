@@ -10,7 +10,7 @@ from qfluentwidgets import FluentIcon
 from ok import Box, ConfigOption
 from src.task.process_feature import process_feature
 
-version = "v3.5.25-beta.9"
+version = "v3.5.25-beta.10"
 
 
 def _find_most_recently_run_pc_exe():
