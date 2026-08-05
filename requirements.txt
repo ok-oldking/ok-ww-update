@@ -6,7 +6,7 @@
 #
     # via -r .\requirements.in
 OpenCC==1.2.0
-onnxocr-ppocrv5==0.0.18
+onnxocr-ppocrv5>=0.0.18
     # via -r .\requirements.in
     # via ok-script
 pynput==1.8.2
