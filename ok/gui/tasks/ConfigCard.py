@@ -1,5 +1,5 @@
 from PySide6.QtCore import Qt
-from PySide6.QtWidgets import QFrame, QHBoxLayout
+from PySide6.QtWidgets import QApplication, QFrame, QHBoxLayout
 from qfluentwidgets import FluentIcon, ExpandSettingCard, PushButton
 
 from ok import og
@@ -140,6 +140,8 @@ class ConfigContentMixin:
             switch_button = getattr(widget, 'switch_button', None)
             if switch_button is not None:
                 switch_button.checkedChanged.connect(self.__apply_sub_config_visibility)
+            for check_box in getattr(widget, 'check_boxes', []):
+                check_box.checkStateChanged.connect(self.__apply_sub_config_visibility)
 
         self.__apply_sub_config_visibility()
 
@@ -213,14 +215,32 @@ class ConfigContentMixin:
         return keys
 
     def __get_active_sub_config_keys(self, key):
-        try:
-            config_keys = self.sub_configs_rules.get(key, {}).get(self.config.get(key), [])
-        except TypeError:
-            return []
+        config_keys = self.__resolve_sub_config_keys(
+            self.sub_configs_rules.get(key, {}),
+            self.config.get(key),
+        )
         return [
             config_key for config_key in config_keys
             if config_key in self.config_widget_by_key
         ]
+
+    def __resolve_sub_config_keys(self, rule, value):
+        if not isinstance(value, list):
+            try:
+                return rule.get(value, [])
+            except TypeError:
+                return []
+
+        config_keys = []
+        for selected_value in value:
+            try:
+                selected_config_keys = rule.get(selected_value, [])
+            except TypeError:
+                continue
+            for config_key in selected_config_keys:
+                if config_key not in config_keys:
+                    config_keys.append(config_key)
+        return config_keys
 
     def __apply_sub_config_visibility(self, *args):
         self.__sync_sub_config_order()
@@ -299,10 +319,7 @@ class ConfigContentMixin:
             if not self.__is_config_visible(parent_key, checking):
                 return False
 
-            try:
-                visible_config_keys = rule.get(self.config.get(parent_key), [])
-            except TypeError:
-                visible_config_keys = []
+            visible_config_keys = self.__resolve_sub_config_keys(rule, self.config.get(parent_key))
 
             if key not in visible_config_keys:
                 return False
@@ -322,17 +339,39 @@ class ConfigCard(ConfigContentMixin, ExpandSettingCard):
         self._expand_enabled = True
         super().__init__(config_icon or FluentIcon.INFO, og.app.tr(name), og.app.tr(description))
         self._init_config_content(task, config, default_config, config_description, config_type)
-        self.expandAni.finished.connect(self._sync_collapsed_height)
 
     def setExpand(self, isExpand: bool):
         if isExpand and not self._expand_enabled:
             return
-        super().setExpand(isExpand)
+        if self.isExpand == isExpand:
+            return
 
-    def _sync_collapsed_height(self):
-        """Prevent dynamic content size hints from leaving a collapsed card partially open."""
-        if not self.isExpand:
-            self.setFixedHeight(self.viewportMargins().top())
+        content_height = self.viewLayout.sizeHint().height()
+        header_height = self.viewportMargins().top()
+        target_height = header_height + content_height if isExpand else header_height
+        parent = self.parentWidget()
+        parent_updates_enabled = parent is not None and parent.updatesEnabled()
+        if parent_updates_enabled:
+            parent.setUpdatesEnabled(False)
+
+        self.expandAni.stop()
+        try:
+            self.spaceWidget.setFixedHeight(content_height)
+            self.verticalScrollBar().setValue(0)
+            self.isExpand = isExpand
+            self.setProperty('isExpand', isExpand)
+            self.setStyle(QApplication.style())
+            self.card.expandButton.setExpand(isExpand)
+            self.setFixedHeight(target_height)
+
+            parent_layout = parent.layout() if parent is not None else None
+            if parent_layout is not None:
+                parent_layout.invalidate()
+                parent_layout.activate()
+        finally:
+            if parent_updates_enabled:
+                parent.setUpdatesEnabled(True)
+                parent.update()
 
     def _on_empty_config_content(self):
         self._expand_enabled = False
