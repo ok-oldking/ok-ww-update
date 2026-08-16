@@ -5,7 +5,7 @@ from pathlib import Path
 from ok import Box, ConfigOption, Icon
 from src.task.process_feature import process_feature
 
-version = "v3.5.28-beta.9"
+version = "v3.5.28"
 
 
 def _find_most_recently_run_pc_exe():
@@ -216,6 +216,7 @@ config = {
         'default': {
             'github': 'https://github.com/ok-oldking/ok-wuthering-waves',
             'discord': 'https://discord.gg/vVyCatEBgA',
+            'download': 'https://ok-script.com/ok-ww',
             'sponsor': 'https://patreon.com/ok_oldking',
             'share': 'Download OK-WW from https://ok-script.com/ok-ww',
             'faq': 'https://ok-script.com/ok-ww/'
