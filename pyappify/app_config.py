@@ -22,7 +22,7 @@ _LOG = logging.getLogger("pyappify.app_config")
 class AppConfigAPI:
     """Thread-safe access to the app preferences stored by PyAppify."""
 
-    def __init__(self, path=None, watch=False, watch_interval=0.5):
+    def __init__(self, path=None, watch=False, watch_interval=0.5, exit_event=None):
         self._lock = threading.RLock()
         self._path = None
         self._preferences = {
@@ -31,22 +31,29 @@ class AppConfigAPI:
         }
         self._listeners = set()
         self._watch_interval = watch_interval
+        self._exit_event = exit_event
         self._watch_stop = None
         self._watch_thread = None
         if path:
-            self.configure(path, watch=watch, watch_interval=watch_interval)
+            self.configure(
+                path,
+                watch=watch,
+                watch_interval=watch_interval,
+                exit_event=exit_event,
+            )
 
     @property
     def path(self):
         with self._lock:
             return self._path
 
-    def configure(self, path, watch=True, watch_interval=0.5):
+    def configure(self, path, watch=True, watch_interval=0.5, exit_event=None):
         self.stop_watcher()
         normalized_path = os.path.abspath(os.path.expanduser(path)) if path else None
         with self._lock:
             self._path = normalized_path
             self._watch_interval = watch_interval
+            self._exit_event = exit_event
             self._preferences = {
                 "auto_start": False,
                 "update_method": UPDATE_METHOD_AUTO,
@@ -153,17 +160,19 @@ class AppConfigAPI:
         with self._lock:
             self._listeners.discard(listener)
 
-    def start_watcher(self):
+    def start_watcher(self, exit_event=None):
         with self._lock:
             if not self._path:
                 raise RuntimeError("PYAPPIFY_APP_JSON_PATH is not configured")
             if self._watch_thread and self._watch_thread.is_alive():
                 return self._watch_thread
+            if exit_event is not None:
+                self._exit_event = exit_event
             stop_event = threading.Event()
             self._watch_stop = stop_event
             thread = threading.Thread(
                 target=self._watch_loop,
-                args=(stop_event,),
+                args=(stop_event, self._exit_event),
                 name="pyappify-app-config-watch",
                 daemon=True,
             )
@@ -182,8 +191,12 @@ class AppConfigAPI:
         if thread and thread is not threading.current_thread():
             thread.join(timeout=max(1.0, self._watch_interval * 2))
 
-    def _watch_loop(self, stop_event):
+    def _watch_loop(self, stop_event, exit_event=None):
+        if exit_event is not None and exit_event.is_set():
+            return
         while not stop_event.wait(self._watch_interval):
+            if exit_event is not None and exit_event.is_set():
+                return
             try:
                 self.refresh()
             except (OSError, ValueError, json.JSONDecodeError):
@@ -193,8 +206,13 @@ class AppConfigAPI:
 _api = AppConfigAPI()
 
 
-def configure_app_json(path=None, watch=True, watch_interval=0.5):
-    return _api.configure(path, watch=watch, watch_interval=watch_interval)
+def configure_app_json(path=None, watch=True, watch_interval=0.5, exit_event=None):
+    return _api.configure(
+        path,
+        watch=watch,
+        watch_interval=watch_interval,
+        exit_event=exit_event,
+    )
 
 
 def get_app_json_path():
@@ -233,8 +251,8 @@ def remove_app_config_listener(listener):
     _api.remove_listener(listener)
 
 
-def start_app_config_watcher():
-    return _api.start_watcher()
+def start_app_config_watcher(exit_event=None):
+    return _api.start_watcher(exit_event=exit_event)
 
 
 def stop_app_config_watcher():

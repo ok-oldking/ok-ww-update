@@ -6,8 +6,8 @@ import win32con
 import win32gui
 import win32process
 
-from ok.gui.Communicate import communicate
-from ok.gui.util.Alert import alert_info
+from ok.core.events import communicate
+from ok.core.notifications import alert_info
 from ok.util.GlobalConfig import basic_options
 from ok.util.logger import Logger
 from ok.util.window import show_title_bar, get_window_bounds, resize_window, is_foreground_window, find_hwnd
@@ -287,7 +287,7 @@ class HwndWindow:
                             logger.error(f'og.executor.pause pos_invalid: {x, y, width, height}')
                             communicate.notification.emit('Paused because game window is minimized or out of screen!',
                                                           None,
-                                                          True, True, "start", None)
+                                                          True, True, "start", None, None)
                     if pos_valid != self.pos_valid:
                         self.pos_valid = pos_valid
                 else:
@@ -296,7 +296,7 @@ class HwndWindow:
                         alert_info('Auto exit because game exited', True)
                         communicate.quit.emit()
                     else:
-                        communicate.notification.emit('Game Exited', None, True, True, None, None)
+                        communicate.notification.emit('Game Exited', None, True, True, None, None, None)
                     self.hwnd = 0
                     visible = False
                 if visible != self.visible:

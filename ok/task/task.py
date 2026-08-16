@@ -2,15 +2,14 @@ import re
 import threading
 import time
 from typing import List
-from PySide6.QtCore import QCoreApplication
-
 import cv2
-from qfluentwidgets import FluentIcon
+from numpy import ndarray
 
+from ok.core.events import communicate
+from ok.core.icons import Icon
 from ok.feature.Box import find_boxes_by_name, find_boxes_within_boundary, Box, find_box_by_name, relative_box, \
     sort_boxes, find_highest_confidence_box
 from ok.feature.FeatureSet import adjust_coordinates, resize_image, scale_box, join_list_elements
-from ok.gui.Communicate import communicate
 from ok.task.exceptions import HotkeyConfigException
 from ok.util.color import calculate_color_percentage
 from ok.util.config import Config
@@ -83,6 +82,10 @@ class ExecutorOperation:
         :return: The task instance or None. 任务实例或 None。
         """
         return self.executor.get_task_by_class(cls)
+
+    def get_tasks(self):
+        """Return registered tasks without exposing the executor to extensions."""
+        return list(self.executor.get_all_tasks())
 
     def box_in_horizontal_center(self, box, off_percent=0.02):
         """
@@ -853,7 +856,8 @@ class OCR(FindFeature):
             auto_simplify = ocr_config.get('auto_simplify', False)
 
         if auto_simplify:
-            locale_name = self.executor.locale.name()
+            locale = self.executor.locale
+            locale_name = locale.name() if hasattr(locale, "name") else str(locale)
             if locale_name.startswith('zh_TW') or locale_name.startswith('zh_HK') or locale_name.startswith('zh_MO'):
                 try:
                     from opencc import OpenCC
@@ -899,8 +903,8 @@ class OCR(FindFeature):
             logger.error('onnx_ocr', e)
             self.screenshot('onnx_ocr_exception', frame=image)
             if 'ZE_RESULT_ERROR_DEVICE_LOST' in str(e):
-                raise Exception(QCoreApplication.translate('Task',
-                                                           'NPU inferring Error, you might need to update the Intel NPU driver!'))
+                raise Exception(self._app.tr(
+                    'NPU inferring Error, you might need to update the Intel NPU driver!'))
             raise e
         detected_boxes = []
         # logger.debug(f'rapid_ocr result {result}')
@@ -1094,7 +1098,7 @@ class BaseTask(OCR):
         self.start_time = 0
         self.icon = None
         self.group_name = None
-        self.group_icon = FluentIcon.SYNC
+        self.group_icon = Icon.SYNC
         self.first_run_alert = None
         self.show_create_shortcut = False
         self.sleep_check_interval = -1
@@ -1207,24 +1211,54 @@ class BaseTask(OCR):
     def paused(self):
         return self._paused
 
-    def log_info(self, message, notify=False):
+    def _notification_images(self, images: ndarray | list[ndarray] | None = None, screenshot: bool = False):
+        if images is None:
+            result = []
+        elif isinstance(images, (list, tuple)):
+            result = [image for image in images if image is not None]
+        else:
+            result = [images]
+        if screenshot:
+            frame = self.executor.nullable_frame()
+            if frame is not None:
+                result.append(frame)
+        return [image.copy() if hasattr(image, 'copy') else image for image in result]
+
+    def _write_log_images(self, message, images: ndarray | list[ndarray] | None = None,
+                          screenshot: bool = False):
+        frames = self._notification_images(images, screenshot)
+        for index, frame in enumerate(frames):
+            communicate.screenshot.emit(frame, f'log/log_{index + 1}', False, None)
+        return frames
+
+    def log_info(self, message, notify=False, images: ndarray | list[ndarray] | None = None,
+                 screenshot: bool = False):
         self.logger.info(message)
         self.info_set("Log", message)
         if notify:
-            self.notification(message, tray=True)
+            self.notification(message, tray=True, images=images, screenshot=screenshot)
+        else:
+            self._write_log_images(message, images, screenshot)
 
-    def log_debug(self, message, notify=False):
+    def log_debug(self, message, notify=False, images: ndarray | list[ndarray] | None = None,
+                  screenshot: bool = False):
         self.logger.debug(message)
         if notify:
-            self.notification(message, tray=True)
+            self.notification(message, tray=True, images=images, screenshot=screenshot)
+        else:
+            self._write_log_images(message, images, screenshot)
 
-    def log_warning(self, message, notify=False):
+    def log_warning(self, message, notify=False, images: ndarray | list[ndarray] | None = None,
+                    screenshot: bool = False):
         self.logger.warning(message)
         self.info_set("Warning", message)
         if notify:
-            self.notification(message, tray=True)
+            self.notification(message, tray=True, images=images, screenshot=screenshot)
+        else:
+            self._write_log_images(message, images, screenshot)
 
-    def log_error(self, message, exception=None, notify=False):
+    def log_error(self, message, exception=None, notify=False, images: ndarray | list[ndarray] | None = None,
+                  screenshot: bool = False):
         self.logger.error(message, exception)
         if exception is not None:
             if len(exception.args) > 0:
@@ -1233,7 +1267,9 @@ class BaseTask(OCR):
                 message += str(exception)
         self.info_set("Error", message)
         if notify:
-            self.notification(message, error=True, tray=True)
+            self.notification(message, error=True, tray=True, images=images, screenshot=True)
+        else:
+            self._write_log_images(message, images, True)
 
     def go_to_tab(self, tab):
         self.log_info(f"go to tab {tab}")
@@ -1243,8 +1279,19 @@ class BaseTask(OCR):
         self.executor.start()
         self.enable()
 
-    def notification(self, message, title=None, error=False, tray=False, show_tab=None, params=None):
-        communicate.notification.emit(message, title, error, tray, show_tab, params)
+    def notification(self, message, title=None, error=False, tray=False, show_tab=None, params=None,
+                     images: ndarray | list[ndarray] | None = None, screenshot: bool = False):
+        frames = self._notification_images(images, screenshot)
+        for index, frame in enumerate(frames):
+            communicate.screenshot.emit(frame, f'notification/notification_{index + 1}', False, None)
+        communicate.notification.emit(message, title, error, tray, show_tab, params, frames)
+
+    def emit_web_event(self, event, payload=None):
+        """Publish a serializable event to this task's optional browser tab."""
+        tab = getattr(self, "web_tab", None)
+        if tab is None:
+            raise RuntimeError(f"{self.__class__.__name__} does not declare web_tab")
+        communicate.task_tab.emit(tab.id, str(event), payload)
 
     @property
     def enabled(self):
@@ -1254,7 +1301,7 @@ class BaseTask(OCR):
         self.info.clear()
 
     def info_incr(self, key, inc=1):
-        # If the key is in the dictionary, get its value. If not, return 0.
+        # If the key is in the dictionary, get its value. If not, return 0.p
         value = self.info.get(key, 0)
         # Increment the value
         value += inc

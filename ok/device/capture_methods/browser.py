@@ -5,7 +5,7 @@ import threading
 
 import win32gui
 
-from ok.gui.Communicate import communicate
+from ok.core.events import communicate
 from ok.task.exceptions import CaptureException
 from ok.util.logger import Logger
 from ok.util.window import resize_window, windows_graphics_available, find_hwnd
@@ -244,7 +244,7 @@ class BrowserCaptureMethod(BaseCaptureMethod):
                 logger.warning('BrowserCaptureMethod page closed')
                 self.page = None
                 self.browser = None
-                communicate.notification.emit('Paused because browser exited', None, True, True, "start", None)
+                communicate.notification.emit('Paused because browser exited', None, True, True, "start", None, None)
             return None
 
         if self.wgc_capture:
