@@ -5,7 +5,7 @@ from pathlib import Path
 from ok import Box, ConfigOption, Icon
 from src.task.process_feature import process_feature
 
-version = "v3.5.30"
+version = "v3.5.31"
 
 
 def _find_most_recently_run_pc_exe():
@@ -272,9 +272,9 @@ config = {
         ["src.task.MouseResetTask", "MouseResetTask"],
     ], 'scene': ["src.scene.WWScene", "WWScene"],
     'update_pyappify': {
-        'to_version': '1.1.9',
-        'zip_url': 'https://github.com/ok-oldking/ok-wuthering-waves/releases/download/v3.5.17/ok-ww-win32.zip',
-        'sha256': '0ad4d89aae5995641136eb977536a05d2f9c567c9a43ab16c670a947bc301531',
+        'to_version': '1.2.3',
+        'zip_url': 'https://github.com/ok-oldking/ok-wuthering-waves/releases/download/v3.5.30/ok-ww-win32.zip',
+        'sha256': '447207edbfb6944beb994347048e155df99775eb18c87dcae54dda125071c94a',
     }
 
 }

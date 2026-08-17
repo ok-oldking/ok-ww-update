@@ -412,6 +412,12 @@ def get_version_list(
     if not isinstance(release_only, bool):
         raise TypeError("release_only must be a boolean")
 
+    if not _is_supported_pyappify_version(pyappify_version):
+        raise RuntimeError(
+            "PyAppify does not support checking for updates for "
+            f"pyappify_version: {pyappify_version}"
+        )
+
     if "PYAPPIFY_PYTHON_TEST" in os.environ:
         if _wait_for_exit(exit_event, 5):
             _raise_if_exit_requested(exit_event)
@@ -431,6 +437,19 @@ def get_version_list(
     if not isinstance(response, list):
         raise RuntimeError("PyAppify returned an invalid version-list response")
     return response
+
+
+def _is_supported_pyappify_version(version):
+    """Return whether a PyAppify version is valid and supports version checks."""
+    if not isinstance(version, str) or not version:
+        return False
+
+    normalized = version[1:] if version.startswith("v") else version
+    parts = normalized.split(".")
+    if not parts or any(not part.isdigit() for part in parts):
+        return False
+
+    return tuple(int(part) for part in parts) >= (1, 2, 2)
 
 
 def get_versions(number_versions=10, release_only=True, timeout=120, exit_event=None):
