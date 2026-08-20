@@ -15,6 +15,7 @@ from ctypes import wintypes
 
 from ok import Logger, og
 from ok.core.events import communicate
+from ok.util.handler import ExitEvent, Handler
 
 logger = Logger.get_logger(__name__)
 
@@ -37,15 +38,20 @@ if os.name == "nt":
     SWP_SHOWWINDOW = 0x0040
     WM_DESTROY = 0x0002
     WM_CLOSE = 0x0010
+    WM_QUIT = 0x0012
     WM_NCCREATE = 0x0081
     WM_APP = 0x8000
     WM_RENDER = WM_APP + 17
+    INPUT_POLL_INTERVAL = 0.02
     AC_SRC_OVER = 0
     AC_SRC_ALPHA = 1
     BI_RGB = 0
     DIB_RGB_COLORS = 0
     TRANSPARENT = 1
     PS_SOLID = 0
+    PS_DASH = 1
+    VK_RBUTTON = 0x02
+    VK_MENU = 0x12
 
 
     class POINT(ctypes.Structure):
@@ -118,6 +124,8 @@ if os.name == "nt":
     user32.DefWindowProcW.restype = LRESULT
     user32.PostMessageW.argtypes = [ctypes.c_void_p, wintypes.UINT, wintypes.WPARAM, wintypes.LPARAM]
     user32.PostMessageW.restype = wintypes.BOOL
+    user32.PostThreadMessageW.argtypes = [wintypes.DWORD, wintypes.UINT, wintypes.WPARAM, wintypes.LPARAM]
+    user32.PostThreadMessageW.restype = wintypes.BOOL
     user32.GetMessageW.argtypes = [ctypes.POINTER(wintypes.MSG), ctypes.c_void_p, wintypes.UINT, wintypes.UINT]
     user32.GetMessageW.restype = ctypes.c_int
     user32.ShowWindow.argtypes = [ctypes.c_void_p, ctypes.c_int]
@@ -129,6 +137,10 @@ if os.name == "nt":
     user32.GetWindowRect.restype = wintypes.BOOL
     user32.IsWindowVisible.argtypes = [ctypes.c_void_p]
     user32.IsWindowVisible.restype = wintypes.BOOL
+    user32.GetCursorPos.argtypes = [ctypes.POINTER(POINT)]
+    user32.GetCursorPos.restype = wintypes.BOOL
+    user32.GetAsyncKeyState.argtypes = [ctypes.c_int]
+    user32.GetAsyncKeyState.restype = ctypes.c_short
     user32.GetDC.argtypes = [ctypes.c_void_p]
     user32.GetDC.restype = ctypes.c_void_p
     user32.ReleaseDC.argtypes = [ctypes.c_void_p, ctypes.c_void_p]
@@ -157,10 +169,24 @@ if os.name == "nt":
     gdi32.SetTextColor.restype = wintypes.DWORD
     gdi32.Rectangle.argtypes = [ctypes.c_void_p, ctypes.c_int, ctypes.c_int, ctypes.c_int, ctypes.c_int]
     gdi32.Rectangle.restype = wintypes.BOOL
+    gdi32.MoveToEx.argtypes = [ctypes.c_void_p, ctypes.c_int, ctypes.c_int, ctypes.POINTER(POINT)]
+    gdi32.MoveToEx.restype = wintypes.BOOL
+    gdi32.LineTo.argtypes = [ctypes.c_void_p, ctypes.c_int, ctypes.c_int]
+    gdi32.LineTo.restype = wintypes.BOOL
+    gdi32.CreateFontW.argtypes = [ctypes.c_int, ctypes.c_int, ctypes.c_int, ctypes.c_int, ctypes.c_int,
+                                  wintypes.DWORD, wintypes.DWORD, wintypes.DWORD, wintypes.DWORD,
+                                  wintypes.DWORD, wintypes.DWORD, wintypes.DWORD, wintypes.DWORD,
+                                  wintypes.LPCWSTR]
+    gdi32.CreateFontW.restype = ctypes.c_void_p
     gdi32.TextOutW.argtypes = [ctypes.c_void_p, ctypes.c_int, ctypes.c_int, wintypes.LPCWSTR, ctypes.c_int]
     gdi32.TextOutW.restype = wintypes.BOOL
+    gdi32.GetTextExtentPoint32W.argtypes = [ctypes.c_void_p, wintypes.LPCWSTR, ctypes.c_int,
+                                            ctypes.POINTER(SIZE)]
+    gdi32.GetTextExtentPoint32W.restype = wintypes.BOOL
     kernel32.GetModuleHandleW.argtypes = [wintypes.LPCWSTR]
     kernel32.GetModuleHandleW.restype = ctypes.c_void_p
+    kernel32.GetCurrentThreadId.argtypes = []
+    kernel32.GetCurrentThreadId.restype = wintypes.DWORD
 
     _instances: dict[int, "Win32GdiOverlay"] = {}
     _class_lock = threading.Lock()
@@ -201,17 +227,16 @@ class GdiCanvas:
 class Win32GdiOverlay:
     """Native overlay with the API previously exposed by ``OverlayWindow``."""
 
-    _log_colors = {
-        "DEBUG": (85, 255, 85), "INFO": (135, 206, 250),
-        "WARNING": (255, 255, 85), "ERROR": (255, 85, 85),
-    }
-    _log_levels = {10: "DEBUG", 20: "INFO", 30: "WARNING", 40: "ERROR"}
-
-    def __init__(self, hwnd_window=None, *, native=True):
+    def __init__(self, hwnd_window=None, *, native=True, exit_event=None):
         self._lock = threading.RLock()
         self._ready = threading.Event()
+        self._close_lock = threading.Lock()
         self._closed = False
+        self.exit_event = exit_event or ExitEvent()
+        if hasattr(self.exit_event, "bind_stop"):
+            self.exit_event.bind_stop(self)
         self._hwnd = 0
+        self._window_thread_id = 0
         self._owner_hwnd = int(getattr(hwnd_window, "hwnd", 0) or 0)
         self._render_posted = False
         self._last_overlay_state = None
@@ -228,9 +253,22 @@ class Win32GdiOverlay:
         self._boxes_active = False
         self._boxes_until = 0.0
         self._custom_active_until = 0.0
+        self._mouse_position = (0, 0)
+        self._pointer_inside = False
+        self._is_alt_down = False
+        self._right_down = False
+        self._accumulated_coords = []
+        self._click_points = []
+        self._input_stop = threading.Event()
+        self._input_thread = None
+        self._expiry_lock = threading.RLock()
+        self._expiry_jobs = {}
+        self._expiry_wakeup_at = None
+        self._expiry_handler = Handler(
+            self.exit_event, "Win32GdiOverlayExpiry", daemon=True)
+        self._qt_clipboard_writer = self._create_qt_clipboard_writer()
         self.custom_painters = {}
         self._custom_painter_until = {}
-        self.logs = []
         self.blur_images = []
         self._py_object = ctypes.py_object(self) if self._native_available else None
 
@@ -238,12 +276,15 @@ class Win32GdiOverlay:
         communicate.clear_box.connect(self.clear_drawing)
         communicate.blur_overlay.connect(self.update_blur_patches)
         communicate.clear_blur_overlay.connect(self.clear_blur_overlay)
-        communicate.log.connect(self.add_log)
 
         if self._native_available:
             self._thread = threading.Thread(target=self._window_thread, name="Win32GdiOverlay", daemon=True)
             self._thread.start()
             self._ready.wait(2)
+            if self._hwnd:
+                self._input_thread = threading.Thread(
+                    target=self._input_loop, name="Win32GdiOverlayInput", daemon=True)
+                self._input_thread.start()
         logger.info(
             f"Win32 overlay initialized: native={self._native_available}, hwnd={self._hwnd}, "
             f"owner={self._owner_hwnd}")
@@ -287,6 +328,7 @@ class Win32GdiOverlay:
             self._frame_width, self._frame_height = self._width, self._height
             if not visible:
                 self.blur_images = []
+                self._reset_coordinate_capture()
             state = (self._source_visible, self._x, self._y, self._width, self._height)
             if state != self._last_overlay_state:
                 self._last_overlay_state = state
@@ -302,28 +344,37 @@ class Win32GdiOverlay:
             if not enabled:
                 self._boxes_active = False
                 self._boxes_until = 0
+                self._reset_coordinate_capture()
             logger.info(
                 f"Win32 overlay boxes enabled={self._boxes_enabled}, "
                 f"source_visible={self._source_visible}, hwnd={self._hwnd}")
+        if not enabled:
+            self._cancel_expiry("boxes")
         self._schedule_render()
 
     def request_show(self, duration=4.0):
         with self._lock:
             self._custom_active_until = time.monotonic() + max(0, float(duration))
-        self._schedule_expiry(duration, self.expire_custom_drawing)
+        self._schedule_expiry("custom-active", duration, self.expire_custom_drawing)
         self._schedule_render()
 
     def draw(self, key, callback, duration=None):
         if not callable(callback):
             raise TypeError("callback must be callable")
+        expires_at = None
         with self._lock:
             self.custom_painters[str(key)] = callback
             if duration is None:
                 self._custom_painter_until.pop(str(key), None)
             else:
-                self._custom_painter_until[str(key)] = time.monotonic() + max(0, float(duration))
+                expires_at = time.monotonic() + max(0, float(duration))
+                self._custom_painter_until[str(key)] = expires_at
         if duration is not None:
-            self._schedule_expiry(duration, lambda: self._expire_custom_draw(str(key)))
+            self._schedule_expiry(
+                f"custom:{key}", duration,
+                lambda: self._expire_custom_draw(str(key), expires_at))
+        else:
+            self._cancel_expiry(f"custom:{key}")
         self._schedule_render()
 
     def clear_draw(self, key=None):
@@ -334,25 +385,31 @@ class Win32GdiOverlay:
             else:
                 self.custom_painters.pop(str(key), None)
                 self._custom_painter_until.pop(str(key), None)
+        if key is None:
+            self._cancel_expiry(prefix="custom:")
+        else:
+            self._cancel_expiry(f"custom:{key}")
         self._schedule_render()
 
     def on_draw_box(self, _key, boxes, _color, _frame, _debug):
         if boxes and self._boxes_enabled:
+            now = time.monotonic()
             with self._lock:
                 self._boxes_active = True
-                self._boxes_until = time.monotonic() + 4.0
-                if time.monotonic() - self._last_draw_log_at > 1.0:
-                    self._last_draw_log_at = time.monotonic()
+                self._boxes_until = now + 4.0
+                if now - self._last_draw_log_at > 1.0:
+                    self._last_draw_log_at = now
                     # logger.info(
                     #     f"Win32 overlay draw event: key={_key}, boxes={len(boxes) if hasattr(boxes, '__len__') else 1}, "
                     #     f"source_visible={self._source_visible}, rect={self._width}x{self._height}")
-            self._schedule_expiry(4.01, self.expire_boxes)
+            self._schedule_expiry("boxes", 4.01, self.expire_boxes)
             self._schedule_render()
 
     def clear_drawing(self):
         with self._lock:
             self._boxes_active = False
             self._boxes_until = 0
+        self._cancel_expiry("boxes")
         self._schedule_render()
 
     def expire_boxes(self):
@@ -369,9 +426,11 @@ class Win32GdiOverlay:
             self._custom_active_until = 0
         self._schedule_render()
 
-    def _expire_custom_draw(self, key):
+    def _expire_custom_draw(self, key, expected_until=None):
         with self._lock:
-            until = self._custom_painter_until.get(key, 0)
+            until = self._custom_painter_until.get(key)
+            if until is None or (expected_until is not None and until != expected_until):
+                return
             if time.monotonic() < until:
                 return
             self.custom_painters.pop(key, None)
@@ -391,21 +450,6 @@ class Win32GdiOverlay:
             self.blur_images = []
         self._schedule_render()
 
-    def add_log(self, level_no, message):
-        if not self._config_value("show_overlay_logs", True):
-            return
-        message = str(message)
-        if any(text in message for text in
-               ("A new release of pip", "does not currently take into account all the packages")):
-            return
-        parts = message.split(":", 3)
-        if len(parts) > 3:
-            message = parts[3].strip()
-        with self._lock:
-            self.logs.append((self._log_levels.get(level_no, "DEBUG"), message))
-            del self.logs[:-50]
-        self._schedule_render()
-
     def isVisible(self):
         return self._visible
 
@@ -420,25 +464,216 @@ class Win32GdiOverlay:
             self._source_visible = False
         self._schedule_render()
 
-    def close(self):
-        if self._closed:
-            return
-        self._closed = True
-        for signal, callback in (
-                (communicate.draw_box, self.on_draw_box),
-                (communicate.clear_box, self.clear_drawing),
-                (communicate.blur_overlay, self.update_blur_patches),
-                (communicate.clear_blur_overlay, self.clear_blur_overlay),
-                (communicate.log, self.add_log)):
-            signal.disconnect(callback)
-        if self._native_available and self._hwnd:
-            user32.PostMessageW(self._hwnd, WM_CLOSE, 0, 0)
-            self._thread.join(timeout=1)
+    def close(self, wait=True):
+        """Signal shutdown, optionally waiting outside ExitEvent callbacks."""
+        with self._close_lock:
+            first_close = not self._closed
+            self._closed = True
+        if first_close:
+            for signal, callback in (
+                    (communicate.draw_box, self.on_draw_box),
+                    (communicate.clear_box, self.clear_drawing),
+                    (communicate.blur_overlay, self.update_blur_patches),
+                    (communicate.clear_blur_overlay, self.clear_blur_overlay)):
+                signal.disconnect(callback)
+            communicate.window.disconnect(self.update_overlay)
+            self._input_stop.set()
+            with self._expiry_lock:
+                self._expiry_jobs.clear()
+                self._expiry_wakeup_at = None
+            self._expiry_handler.stop()
+            if hasattr(self.exit_event, "unbind_stop"):
+                self.exit_event.unbind_stop(self)
+            if self._native_available:
+                if self._hwnd:
+                    user32.PostMessageW(self._hwnd, WM_CLOSE, 0, 0)
+                if self._window_thread_id:
+                    # WM_QUIT guarantees GetMessageW returns even if window
+                    # destruction races with an in-progress layered render.
+                    user32.PostThreadMessageW(self._window_thread_id, WM_QUIT, 0, 0)
+        if wait:
+            self._join_workers(timeout=.5)
 
-    def _schedule_expiry(self, duration, callback):
-        timer = threading.Timer(max(0, float(duration)) + .01, callback)
-        timer.daemon = True
-        timer.start()
+    def _join_workers(self, timeout):
+        deadline = time.monotonic() + max(0, timeout)
+        for thread in (self._input_thread, self._expiry_handler.thread,
+                       getattr(self, "_thread", None)):
+            if thread is None or thread is threading.current_thread() or not thread.is_alive():
+                continue
+            thread.join(max(0, deadline - time.monotonic()))
+
+    def stop(self):
+        """Non-blocking ExitEvent callback; never stall the GUI close event."""
+        self.close(wait=False)
+
+    @staticmethod
+    def _create_qt_clipboard_writer():
+        """Create the legacy Qt clipboard bridge when a Qt app is active."""
+        try:
+            from PySide6.QtCore import QObject, Qt, Signal
+            from PySide6.QtGui import QGuiApplication
+
+            app = QGuiApplication.instance()
+            if app is None:
+                return None
+
+            class ClipboardWriter(QObject):
+                requested = Signal(str)
+
+                def __init__(self):
+                    super().__init__()
+                    self.requested.connect(
+                        lambda value: QGuiApplication.clipboard().setText(value),
+                        Qt.QueuedConnection,
+                    )
+
+            writer = ClipboardWriter()
+            writer.moveToThread(app.thread())
+            return writer
+        except (ImportError, RuntimeError):
+            return None
+
+    def _reset_coordinate_capture(self):
+        self._is_alt_down = False
+        self._right_down = False
+        self._pointer_inside = False
+        self._accumulated_coords = []
+        self._click_points = []
+
+    def _poll_input(self):
+        """Poll global input because the overlay remains click-through."""
+        point = POINT()
+        if not user32.GetCursorPos(ctypes.byref(point)):
+            return
+        right_state = user32.GetAsyncKeyState(VK_RBUTTON)
+        self._update_input_state(
+            bool(user32.GetAsyncKeyState(VK_MENU) & 0x8000),
+            bool(right_state & 0x8000 or right_state & 0x0001),
+            point.x,
+            point.y,
+        )
+
+    def _input_loop(self):
+        """Poll independently so layered-window painting cannot miss clicks."""
+        while not self._input_stop.is_set() and not self.exit_event.is_set():
+            try:
+                self._poll_input()
+            except Exception as error:
+                logger.warning(f"overlay input polling failed: {error}")
+            self._input_stop.wait(INPUT_POLL_INTERVAL)
+
+    def _update_input_state(self, alt_down, right_down, cursor_x, cursor_y):
+        """Update crosshair/copy state from one input sample.
+
+        Kept separate from the Win32 polling call so the interaction can be
+        verified without creating a native desktop window.
+        """
+        clipboard_text = None
+        with self._lock:
+            if not self._boxes_enabled:
+                alt_down = False
+                right_down = False
+            previous = (self._is_alt_down, self._right_down, self._pointer_inside,
+                        self._mouse_position, tuple(self._click_points))
+            relative = (int(cursor_x) - self._x, int(cursor_y) - self._y)
+            inside = (self._source_visible and 0 <= relative[0] < self._width
+                      and 0 <= relative[1] < self._height)
+
+            if not alt_down:
+                self._accumulated_coords = []
+                self._click_points = []
+            if inside:
+                self._mouse_position = relative
+
+            # Capture only the up-to-down edge. The click still passes through
+            # to the game because the native window has WS_EX_TRANSPARENT.
+            if alt_down and right_down and not self._right_down and inside and self._width and self._height:
+                x_percent = relative[0] / self._width
+                y_percent = relative[1] / self._height
+                coordinate = f"{x_percent:.3f}, {y_percent:.3f}"
+                if len(self._accumulated_coords) >= 2:
+                    self._accumulated_coords[1] = coordinate
+                    self._click_points[1] = relative
+                else:
+                    self._accumulated_coords.append(coordinate)
+                    self._click_points.append(relative)
+                clipboard_text = ", ".join(self._accumulated_coords)
+
+            self._is_alt_down = bool(alt_down)
+            self._right_down = bool(right_down)
+            self._pointer_inside = inside
+            current = (self._is_alt_down, self._right_down, self._pointer_inside,
+                       self._mouse_position, tuple(self._click_points))
+
+        if clipboard_text is not None:
+            self._copy_to_clipboard(clipboard_text)
+        if current != previous:
+            self._schedule_render()
+
+    def _copy_to_clipboard(self, text):
+        try:
+            if self._qt_clipboard_writer is not None:
+                # This reproduces the pre-refactor QGuiApplication clipboard
+                # path without touching Qt from the native polling thread.
+                self._qt_clipboard_writer.requested.emit(text)
+                return
+            from ok.third_party.paperclip import copy
+            copy(text)
+        except Exception as error:
+            logger.warning(f"coordinate clipboard copy failed: {error}")
+
+    def _schedule_expiry(self, key, duration, callback):
+        """Replace one keyed deadline without creating a thread per event.
+
+        The boxes job is updated hundreds of times per second during busy
+        scenes, but this mapping remains bounded to one entry for that job.
+        """
+        deadline = time.monotonic() + max(0, float(duration)) + .01
+        with self._expiry_lock:
+            if self._closed or self.exit_event.is_set():
+                return
+            self._expiry_jobs[str(key)] = (deadline, callback)
+            self._queue_next_expiry_locked()
+
+    def _cancel_expiry(self, key=None, prefix=None):
+        with self._expiry_lock:
+            if key is not None:
+                self._expiry_jobs.pop(str(key), None)
+            elif prefix is not None:
+                matches = [job_key for job_key in self._expiry_jobs if job_key.startswith(prefix)]
+                for job_key in matches:
+                    self._expiry_jobs.pop(job_key, None)
+            else:
+                self._expiry_jobs.clear()
+
+    def _queue_next_expiry_locked(self):
+        if not self._expiry_jobs:
+            return
+        deadline = min(job[0] for job in self._expiry_jobs.values())
+        # An already queued earlier wake-up is harmless and avoids touching
+        # Handler's queue for every boxes event that merely extends a deadline.
+        if self._expiry_wakeup_at is not None and self._expiry_wakeup_at <= deadline:
+            return
+        self._expiry_wakeup_at = deadline
+        self._expiry_handler.post(
+            self._process_expiries, delay=max(0, deadline - time.monotonic()),
+            remove_existing=True)
+
+    def _process_expiries(self):
+        callbacks = []
+        with self._expiry_lock:
+            self._expiry_wakeup_at = None
+            now = time.monotonic()
+            for key, (deadline, callback) in tuple(self._expiry_jobs.items()):
+                if deadline <= now:
+                    self._expiry_jobs.pop(key, None)
+                    callbacks.append((key, callback))
+            self._queue_next_expiry_locked()
+        for key, callback in callbacks:
+            try:
+                callback()
+            except Exception as error:
+                logger.warning(f"overlay expiry callback failed for {key}: {error}")
 
     def _schedule_render(self):
         if not self._native_available or not self._hwnd or self._closed:
@@ -452,15 +687,19 @@ class Win32GdiOverlay:
 
     def _required_visible(self):
         with self._lock:
+            if self._closed:
+                return False
             custom_active = self._custom_active_until > time.monotonic()
             # Match the Qt overlay's foreground contract: never leave any
             # overlay content over another application when the game loses
             # focus, including freshly received background draw events.
             return bool(self._source_visible and
                         (
-                                    self._boxes_enabled or self._boxes_active or custom_active or self.blur_images or self.custom_painters))
+                                    self._boxes_enabled or self._boxes_active or custom_active or self.blur_images or
+                                    self.custom_painters or (self._is_alt_down and self._pointer_inside)))
 
     def _window_thread(self):
+        self._window_thread_id = kernel32.GetCurrentThreadId()
         try:
             self._register_class()
             instance = kernel32.GetModuleHandleW(None)
@@ -484,6 +723,7 @@ class Win32GdiOverlay:
         while user32.GetMessageW(ctypes.byref(message), None, 0, 0) > 0:
             user32.TranslateMessage(ctypes.byref(message))
             user32.DispatchMessageW(ctypes.byref(message))
+        self._hwnd = 0
 
     @staticmethod
     def _register_class():
@@ -545,7 +785,7 @@ class Win32GdiOverlay:
             gdi32.SetBkMode(memory_dc, TRANSPARENT)
             self._paint_border(memory_dc)
             self._paint_boxes(memory_dc)
-            self._paint_logs(memory_dc)
+            self._paint_coordinate_overlay(memory_dc, pixels)
             self._paint_custom(memory_dc)
             # GDI leaves alpha untouched.  Every coloured pixel becomes opaque;
             # untouched pixels stay transparent in the layered window.
@@ -660,19 +900,79 @@ class Win32GdiOverlay:
         gdi32.SelectObject(hdc, old_brush)
         gdi32.DeleteObject(pen)
 
-    def _paint_logs(self, hdc):
-        if not self._config_value("show_overlay_logs", True):
+    @staticmethod
+    def _paint_dark_panel(pixels, left, top, right, bottom, alpha=180):
+        """Paint clipped translucent black without becoming opaque later.
+
+        The compositor promotes non-black GDI pixels to full alpha. Keeping
+        the panel RGB at zero preserves the requested alpha while subsequent
+        text drawing remains crisp and opaque.
+        """
+        height, width = pixels.shape[:2]
+        left, top = max(0, int(left)), max(0, int(top))
+        right, bottom = min(width, int(right)), min(height, int(bottom))
+        if right <= left or bottom <= top:
             return
-        with self._lock:
-            logs = list(self.logs[-12:])
-        if not logs:
+        panel = pixels[top:bottom, left:right]
+        panel[:, :, :3] = 0
+        panel[:, :, 3] = max(0, min(255, int(alpha)))
+
+    @staticmethod
+    def _text_extent(hdc, text, fallback_width=8, fallback_height=16):
+        size = SIZE()
+        if gdi32.GetTextExtentPoint32W(hdc, text, len(text), ctypes.byref(size)):
+            return max(1, size.cx), max(1, size.cy)
+        return max(1, len(text) * fallback_width), fallback_height
+
+    def _paint_coordinate_overlay(self, hdc, pixels):
+        if not (self._is_alt_down and self._pointer_inside):
             return
-        y = max(0, self._height - 18 * len(logs) - 8)
-        for level, text in logs:
-            gdi32.SetTextColor(hdc, _rgb(*self._log_colors.get(level, (255, 255, 255))))
-            text = text[:200]
-            gdi32.TextOutW(hdc, 5, y, text, len(text))
-            y += 18
+        mouse_x, mouse_y = self._mouse_position
+        pen = gdi32.CreatePen(PS_DASH, 1, _rgb(0, 255, 0))
+        old_pen = gdi32.SelectObject(hdc, pen)
+        gdi32.MoveToEx(hdc, 0, mouse_y, None)
+        gdi32.LineTo(hdc, self._width, mouse_y)
+        gdi32.MoveToEx(hdc, mouse_x, 0, None)
+        gdi32.LineTo(hdc, mouse_x, self._height)
+        gdi32.SelectObject(hdc, old_pen)
+        gdi32.DeleteObject(pen)
+
+        marker_pen = gdi32.CreatePen(PS_SOLID, 2, _rgb(255, 0, 0))
+        old_pen = gdi32.SelectObject(hdc, marker_pen)
+        old_brush = gdi32.SelectObject(hdc, gdi32.GetStockObject(5))
+        if len(self._click_points) == 1:
+            x, y = self._click_points[0]
+            gdi32.MoveToEx(hdc, x - 5, y, None)
+            gdi32.LineTo(hdc, x + 6, y)
+            gdi32.MoveToEx(hdc, x, y - 5, None)
+            gdi32.LineTo(hdc, x, y + 6)
+        elif len(self._click_points) >= 2:
+            (x1, y1), (x2, y2) = self._click_points[:2]
+            gdi32.Rectangle(hdc, min(x1, x2), min(y1, y2), max(x1, x2) + 1, max(y1, y2) + 1)
+        gdi32.SelectObject(hdc, old_pen)
+        gdi32.SelectObject(hdc, old_brush)
+        gdi32.DeleteObject(marker_pen)
+
+        x_percent = mouse_x / self._width if self._width else 0
+        y_percent = mouse_y / self._height if self._height else 0
+        device_manager = getattr(og, "device_manager", None)
+        device_width = getattr(device_manager, "width", 0) or self._width
+        device_height = getattr(device_manager, "height", 0) or self._height
+        device_x = int(x_percent * device_width)
+        device_y = int(y_percent * device_height)
+        text = (f"{device_x}, {device_y}, {x_percent:.3f}, {y_percent:.3f} "
+                f"(Alt+right click to copy)")
+        font = gdi32.CreateFontW(-24, 0, 0, 0, 600, 0, 0, 0, 1, 0, 0, 5, 0, "Segoe UI")
+        old_font = gdi32.SelectObject(hdc, font)
+        text_width, text_height = self._text_extent(
+            hdc, text, fallback_width=13, fallback_height=28)
+        self._paint_dark_panel(
+            pixels, 8, 10, min(self._width, 16 + text_width + 8),
+            min(self._height, 16 + text_height + 6))
+        gdi32.SetTextColor(hdc, _rgb(255, 85, 85))
+        gdi32.TextOutW(hdc, 16, 16, text, len(text))
+        gdi32.SelectObject(hdc, old_font)
+        gdi32.DeleteObject(font)
 
     def _paint_custom(self, hdc):
         canvas = GdiCanvas(hdc, self._ratio())

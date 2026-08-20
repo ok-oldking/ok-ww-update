@@ -72,6 +72,14 @@ class TaskCard(ConfigCard):
 
         self.update_buttons(self.task)
         communicate.task.connect(self.update_buttons)
+        task_callback = self.update_buttons
+        self.destroyed.connect(
+            lambda *_args: communicate.task.disconnect(task_callback)
+        )
+
+    def dispose(self):
+        """Release subscriptions before the Qt widget is deleted."""
+        communicate.task.disconnect(self.update_buttons)
 
     def _compact_header(self):
         """Display the task name and description in one compact row."""
@@ -216,6 +224,7 @@ class TaskCard(ConfigCard):
     def check_changed(self, checked):
         if checked:
             import threading
-            threading.Thread(target=self.task.enable, name="TaskEnable").start()
+            threading.Thread(
+                target=self.task.enable, name="TaskEnable", daemon=True).start()
         else:
             self.task.disable()

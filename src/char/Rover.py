@@ -9,9 +9,10 @@ _ROVER_FORM_NAMES = {
 }
 
 
-class HavocRover(BaseChar):
+class Rover(BaseChar):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.use_skyfall_severance = False
         self._bind_form_logger()
 
     def reset_state(self):
@@ -104,8 +105,15 @@ class HavocRover(BaseChar):
         if self.ring_index == -1:
             self.task._ensure_ring_index()
             self._bind_form_logger()
-            if self.ring_index == Elements.WIND:
-                self.init_wind()
+            names = []
+            for char in self.task.chars:
+                if char is None:
+                    continue
+                name = getattr(char, 'display_name', char.name)
+                names.append(self.task.tr(name) if getattr(self.task, '_app', None) is not None else name)
+            self.task.info_set('Chars', ', '.join(names))
+        if self.ring_index == Elements.WIND:
+            self.init_wind()
 
     def perform_spectro_routine(self):
         if self.has_intro:

@@ -217,7 +217,6 @@ _OK_CONFIG_DEFAULTS = {
     'window_maximized': False,
     'navigation_expanded': True,
     'use_overlay': False,
-    'show_overlay_logs': True,
 }
 
 
@@ -226,24 +225,33 @@ def _create_ok_config(config):
     from ok.util.config import Config
 
     defaults = dict(_OK_CONFIG_DEFAULTS)
-    for key in ('use_overlay', 'show_overlay_logs'):
-        if key in config:
-            defaults[key] = bool(config[key])
+    if 'use_overlay' in config:
+        defaults['use_overlay'] = bool(config['use_overlay'])
     return Config('_ok', defaults)
 
 
 class _OverlayConfigMixin:
     def overlay_state(self):
-        return {
-            'boxes': bool(self.ok_config.get('use_overlay', False)),
-            'logs': bool(self.ok_config.get('show_overlay_logs', True)),
-        }
+        return {'boxes': bool(self.ok_config.get('use_overlay', False))}
 
     def initialize_overlay(self):
         """Apply persisted overlay state independently of the active UI."""
-        if self.ok_config.get('use_overlay', False) or callable(self.config.get('blur_area')):
+        if self.ok_config.get('use_overlay', False):
             overlay = self.get_overlay_view()
-            overlay.set_boxes_enabled(self.ok_config.get('use_overlay', False))
+            if overlay is not None:
+                overlay.set_boxes_enabled(True)
+
+    def _close_overlay(self, wait=True):
+        overlay = self.overlay_window
+        if overlay is None:
+            return
+        from ok.core.events import communicate
+        communicate.window.disconnect(overlay.update_overlay)
+        self.overlay_window = None
+        if wait:
+            overlay.close()
+        else:
+            overlay.close(wait=False)
 
     def sync_overlay_source(self, *_args):
         """Refresh a lazy overlay from the currently selected capture window."""
@@ -254,18 +262,18 @@ class _OverlayConfigMixin:
         overlay.sync_source_window(getattr(device_manager, 'hwnd_window', None))
 
     def set_overlay_setting(self, name, value):
-        key = {'boxes': 'use_overlay', 'logs': 'show_overlay_logs'}.get(name)
-        if key is None:
+        if name != 'boxes':
             raise ValueError(f'Unknown overlay setting: {name}')
 
-        self.ok_config[key] = bool(value)
+        self.ok_config['use_overlay'] = bool(value)
         overlay = self.overlay_window
         if name == 'boxes' and value:
             overlay = self.get_overlay_view()
+        elif name == 'boxes' and not value and overlay is not None:
+            self._close_overlay()
+            return self.overlay_state()
         if overlay is not None:
             self.sync_overlay_source()
-            # This also schedules a repaint so a changed log setting takes
-            # effect immediately in the native overlay.
             overlay.set_boxes_enabled(self.ok_config.get('use_overlay', False))
         return self.overlay_state()
 
@@ -333,9 +341,8 @@ class App(_OverlayConfigMixin):
         logger.debug('init app end')
 
     def quit(self):
-        if self.overlay_window is not None:
-            self.overlay_window.close()
         self.exit_event.set()
+        self._close_overlay(wait=False)
         self._close_device_manager()
         from PySide6.QtCore import QMetaObject, Qt
         QMetaObject.invokeMethod(self.app, "quit", Qt.QueuedConnection)
@@ -403,16 +410,28 @@ class App(_OverlayConfigMixin):
         self.show_message_window(title, content)
 
     def update_overlay(self, visible, x, y, window_width, window_height, width, height, scaling):
-        overlay_view = self.get_overlay_view()
+        if not self.ok_config.get('use_overlay', False):
+            # Treat the setting as an absolute lifecycle gate. In particular,
+            # a configured blur callback must not resurrect a disabled native
+            # window (and its input/expiry workers).
+            if self.overlay_window is not None:
+                self._close_overlay(wait=False)
+            return
+        overlay_view = self.overlay_window
+        if overlay_view is None:
+            overlay_view = self.get_overlay_view()
         if overlay_view:
             overlay_view.update_overlay(visible, x, y, window_width, window_height, width, height, scaling)
 
     def get_overlay_view(self):
         """Return the overlay widget exposed to tasks, custom tabs, and my_app."""
+        if not self.ok_config.get('use_overlay', False):
+            return None
         if self.overlay_window is None:
             from ok.core.events import communicate
             from ok.ui.overlay import Win32GdiOverlay
-            self.overlay_window = Win32GdiOverlay(og.device_manager.hwnd_window)
+            self.overlay_window = Win32GdiOverlay(
+                og.device_manager.hwnd_window, exit_event=self.exit_event)
             communicate.window.connect(self.overlay_window.update_overlay)
             self.overlay_window.set_boxes_enabled(self.ok_config.get('use_overlay', False))
         return self.overlay_window
@@ -462,7 +481,14 @@ class App(_OverlayConfigMixin):
         self.timer.start(1000)
         self.timer.timeout.connect(lambda: None)
 
-        sys.exit(self.app.exec())
+        exit_code = self.app.exec()
+        # QApplication has stopped, but a forgotten non-daemon worker can
+        # still keep the packaged process alive indefinitely. Normal cleanup
+        # gets a grace period; the daemon watchdog disappears by itself when
+        # Python exits normally.
+        from ok.util.process import start_exit_watchdog
+        start_exit_watchdog(exit_code=exit_code)
+        sys.exit(exit_code)
 
 
 class HeadlessApp(_OverlayConfigMixin):
@@ -536,10 +562,9 @@ class HeadlessApp(_OverlayConfigMixin):
         communicate.notification.disconnect(self.show_notification)
         if self.notification_manager is not None:
             self.notification_manager.stop()
-        if self.overlay_window is not None:
-            self.overlay_window.close()
         if self.exit_event:
             self.exit_event.set()
+        self._close_overlay(wait=False)
 
     def show_notification(self, message, title=None, error=False, tray=False,
                           _show_tab=None, params=None, images=None):
@@ -554,11 +579,13 @@ class HeadlessApp(_OverlayConfigMixin):
             self.notification_manager.submit(translated_title, translated_message, images)
 
     def get_overlay_view(self):
+        if not self.ok_config.get('use_overlay', False):
+            return None
         if self.overlay_window is None:
             from ok.core.events import communicate
             from ok.ui.overlay import Win32GdiOverlay
             hwnd_window = getattr(getattr(og, 'device_manager', None), 'hwnd_window', None)
-            self.overlay_window = Win32GdiOverlay(hwnd_window)
+            self.overlay_window = Win32GdiOverlay(hwnd_window, exit_event=self.exit_event)
             communicate.window.connect(self.overlay_window.update_overlay)
             self.overlay_window.set_boxes_enabled(self.ok_config.get('use_overlay', False))
         return self.overlay_window
@@ -624,7 +651,9 @@ class OK:
         wgc_available = _resolve('windows_graphics_available')
 
         if config.get('check_mutex', True):
-            check_mutex_fn()
+            if not check_mutex_fn():
+                raise RuntimeError(
+                    'Another application instance is still running and could not be stopped safely.')
         og.ok = self
         if pyappify.app_version:
             config['version'] = pyappify.app_version
