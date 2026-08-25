@@ -1,5 +1,6 @@
 import difflib
 import json
+import re
 import tempfile
 from datetime import datetime
 from pathlib import Path
@@ -18,6 +19,7 @@ from qfluentwidgets import (
     PlainTextEdit, PrimaryPushButton, PushButton, SubtitleLabel, TableWidget, TextEdit,
 )
 
+from ok import Logger
 from ok.gui.tasks.EditTaskTab import CodeEditor
 from ok.gui.tasks.PythonHighlighter import PythonHighlighter
 from ok.gui.util.app import show_info_bar
@@ -33,6 +35,7 @@ BASE_CHAR_URL = "https://raw.githubusercontent.com/ok-oldking/ok-wuthering-waves
 UPLOAD_TEAM_URL = "https://github.com/ok-oldking/ok-ww-char-code"
 WORKSHOP_TEAM_URL = "https://okwwcharcode.ok-script.com/teams/{slug}.json"
 WORKSHOP_ARCHIVE_HOSTS = {"okwwcharcode.ok-script.com", "raw.githubusercontent.com"}
+logger = Logger.get_logger(__name__)
 
 
 def translate_ui(message):
@@ -61,8 +64,10 @@ class TranslatedDialog(MessageBoxBase):
 
 
 def workshop_team_slug(team):
-    names = sorted((get_english_char_name(name).replace(" ", "_") for name in normalize_team(team)),
-                   key=str.casefold)
+    names = sorted((
+        re.sub(r"[^A-Za-z0-9-]+", "_", get_english_char_name(name)).strip("_")
+        for name in normalize_team(team)
+    ), key=str.casefold)
     return "_".join(names)
 
 
@@ -72,8 +77,10 @@ def workshop_team_url(team):
 
 def fetch_workshop_codes(team):
     expected_members = sorted((get_english_char_name(name) for name in normalize_team(team)), key=str.casefold)
+    url = workshop_team_url(team)
+    logger.info(f"char code workshop request: {url}")
     try:
-        with urlopen(workshop_team_url(team), timeout=15) as response:
+        with urlopen(url, timeout=15) as response:
             content = response.read(2_000_001)
     except HTTPError as error:
         if error.code == 404:
