@@ -1000,11 +1000,14 @@ class WebRuntime:
         return self.templates()
 
     def schedule_tasks(self):
-        from ok.util.windows_schedule import format_next_run_time, trigger_type_for_task
+        from ok.util.windows_schedule import format_next_run_time, trigger_type_for_task, resolve_schedule_task_index
         available = [{"index": index + 1, "name": task.name} for index, task in enumerate(self.executor.onetime_tasks or []) if getattr(task, "support_schedule_task", False) and getattr(task, "visible", True)]
         tasks = []
         for task in self.schedule_manager.query_all_tasks(force_sync=True):
             value = _json_value(task)
+            if task.task_identifier and not task.read_only:
+                value["task_index"] = resolve_schedule_task_index(
+                    task.task_identifier, self.executor.onetime_tasks)
             value["trigger_type"] = trigger_type_for_task(task).value
             value["next_run_time"] = format_next_run_time(task.next_run_time)
             tasks.append(value)
@@ -1020,11 +1023,21 @@ class WebRuntime:
         if task_index not in available_indices:
             raise ValueError("Invalid scheduled task")
         trigger = normalize_trigger_type(body.get("trigger_type", "Daily"))
+        # 根据索引反查任务实例，取模块路径.类名作为稳定标识
+        task_identifier = None
+        try:
+            tasks = list(self.executor.onetime_tasks or [])
+            if 1 <= task_index <= len(tasks):
+                task = tasks[task_index - 1]
+                task_identifier = f"{task.__class__.__module__}.{task.__class__.__name__}"
+        except Exception:
+            logger.exception("Failed to resolve task_identifier for scheduled task")
         success = self.schedule_manager.create_task(
             task_name=str(body.get("name") or ""), task_index=task_index, trigger_type=trigger,
             timeout_hours=int(body.get("timeout_hours", 0)), start_hour=int(body.get("start_hour", 9)),
             start_minute=int(body.get("start_minute", 0)), auto_exit=bool(body.get("auto_exit", True)), enabled=True,
             interval_days=int(body.get("interval_days", 0)), interval_hours=int(body.get("interval_hours", 0)),
+            task_identifier=task_identifier,
         )
         if not success:
             raise RuntimeError("Failed to create scheduled task")
@@ -1044,13 +1057,16 @@ class WebRuntime:
         return self.schedule_tasks()
 
     def update_schedule_task(self, name, body):
-        from ok.util.windows_schedule import normalize_trigger_type
+        from ok.util.windows_schedule import normalize_trigger_type, resolve_schedule_task_index
         current = self.schedule_manager.cache.get(name)
         if current is None:
             current = next((item for item in self.schedule_manager.cache.values() if item.path == name or item.name == name), None)
         if current is None or current.read_only:
             raise ValueError("Scheduled task is not editable")
         task_index = int(body.get("task_index", current.task_index))
+        if current.task_identifier:
+            task_index = resolve_schedule_task_index(
+                current.task_identifier, self.executor.onetime_tasks)
         available_indices = {
             index + 1 for index, task in enumerate(self.executor.onetime_tasks or [])
             if getattr(task, "support_schedule_task", False) and getattr(task, "visible", True)
@@ -1058,12 +1074,24 @@ class WebRuntime:
         if task_index not in available_indices:
             raise ValueError("Invalid scheduled task")
         trigger = normalize_trigger_type(body.get("trigger_type", current.trigger_type or "Daily"))
+        # 优先沿用缓存的稳定标识（模块路径.类名）；缺失时按索引反查任务实例，
+        # 避免修改后 -t 退化为对排序敏感的数字索引格式
+        task_identifier = getattr(current, "task_identifier", "") or None
+        if not task_identifier:
+            try:
+                tasks = list(self.executor.onetime_tasks or [])
+                if 1 <= task_index <= len(tasks):
+                    task = tasks[task_index - 1]
+                    task_identifier = f"{task.__class__.__module__}.{task.__class__.__name__}"
+            except Exception:
+                logger.exception("Failed to resolve task_identifier for modified scheduled task")
         success = self.schedule_manager.replace_task(
             task_name=current.name, task_index=task_index, trigger_type=trigger,
             timeout_hours=int(body.get("timeout_hours", 0)), start_hour=int(body.get("start_hour", 9)),
             start_minute=int(body.get("start_minute", 0)), auto_exit=bool(body.get("auto_exit", True)), enabled=current.enabled,
             description=current.description, interval_days=int(body.get("interval_days", current.interval_days)),
             interval_hours=int(body.get("interval_hours", current.interval_hours)),
+            task_identifier=task_identifier,
         )
         if not success:
             raise RuntimeError("Failed to modify scheduled task")

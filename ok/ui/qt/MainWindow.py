@@ -203,8 +203,16 @@ class MainWindow(FluentWindow):
         self.update_imported_tabs()
         communicate.task_list_updated.connect(self.update_imported_tabs)
 
-        # 添加计划任务Tab
-        any_support_schedule = any(task.support_schedule_task for task in visible_onetime_tasks)
+        # Resolve this launch from local metadata; Windows migration runs in
+        # ScheduleTaskTab's worker so COM cannot block window construction.
+        try:
+            from ok.ui.qt.tasks.schedule_index_sync import resolve_current_schedule_task
+            resolve_current_schedule_task()
+        except Exception:
+            logger.exception("schedule task index sync failed in __init__")
+
+        # 添加计划任务Tab（不要求任务 visible，未显示在 GUI 的任务也可计划调度）
+        any_support_schedule = any(task.support_schedule_task for task in self.executor.onetime_tasks)
         if any_support_schedule:
             from ok.ui.qt.tasks.ScheduleTaskTab import ScheduleTaskTab
             self.schedule_tab = ScheduleTaskTab(config=self.config)

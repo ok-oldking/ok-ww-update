@@ -30,7 +30,6 @@ class TaskExecutor:
     debug: bool
     global_config: object
     _ocr_lib: dict
-    _ocr_init_results: dict
     ocr_target_height: int
     current_task: object
     config_folder: str
@@ -76,7 +75,6 @@ class TaskExecutor:
         self.debug = debug
         self.global_config = global_config
         self._ocr_lib = {}
-        self._ocr_init_results = {}
         if self.config.get('ocr') and not self.config.get('ocr').get('default', False):
             self.config['ocr']['default'] = self.config.get('ocr')
         self.current_task = None
@@ -152,20 +150,9 @@ class TaskExecutor:
         try:
             logger.info('start init default ocr')
             self.ocr_lib()
-            result = self._ocr_init_results.get('default', 'success')
-            logger.info(f'default ocr init end, result: {result}, cost: {time.time() - start:.2f}s')
+            logger.info(f'default ocr init end, cost: {time.time() - start:.2f}s')
         except Exception as e:
             logger.error(f'init default ocr error, cost: {time.time() - start:.2f}s', e)
-
-    @staticmethod
-    def _onnxocr_test_frame():
-        import cv2
-        import numpy as np
-
-        frame = np.full((160, 640, 3), 255, dtype=np.uint8)
-        cv2.putText(frame, 'okscript', (24, 110), cv2.FONT_HERSHEY_SIMPLEX,
-                    2.5, (0, 0, 0), 5, cv2.LINE_AA)
-        return frame
 
     def _create_ocr_lib(self, name):
         ocr_config = self.config.get('ocr').get(name)
@@ -201,31 +188,10 @@ class TaskExecutor:
         elif lib == 'onnxocr':
             from onnxocr.onnx_paddleocr import ONNXPaddleOcr
             logger.info(f'init onnxocr {config_params}')
-            use_npu = config_params.get('use_npu', True)
-            use_openvino = config_params.get('use_openvino', False)
-            if use_npu:
-                test_frame = self._onnxocr_test_frame()
-                try:
-                    ocr_lib = ONNXPaddleOcr(use_angle_cls=False,
-                                            logger=logger,
-                                            use_npu=True,
-                                            use_openvino=use_openvino)
-                    test_result = ocr_lib.ocr(test_frame)
-                    self._ocr_init_results[name] = f'use_npu=True, test_ocr={test_result!r}'
-                except Exception as error:
-                    logger.warning(f'onnxocr NPU test failed, falling back to CPU: {error}')
-                    ocr_lib = ONNXPaddleOcr(use_angle_cls=False,
-                                            logger=logger,
-                                            use_npu=False,
-                                            use_openvino=use_openvino)
-                    self._ocr_init_results[name] = (
-                        f'use_npu=False (NPU test failed: {error!r})')
-            else:
-                ocr_lib = ONNXPaddleOcr(use_angle_cls=False,
-                                        logger=logger,
-                                        use_npu=False,
-                                        use_openvino=use_openvino)
-                self._ocr_init_results[name] = 'use_npu=False'
+            ocr_lib = ONNXPaddleOcr(use_angle_cls=False,
+                                    logger=logger,
+                                    use_npu=config_params.get('use_npu', True),
+                                    use_openvino=config_params.get('use_openvino', False))
         elif lib == 'rapidocr':
             from rapidocr import RapidOCR
             params = {"Global.use_cls": False, "Global.max_side_len": 100000, "Global.min_side_len": 0,
@@ -235,9 +201,7 @@ class TaskExecutor:
             ocr_lib = RapidOCR(params=params)
         else:
             raise Exception(f'ocr lib not supported: {lib}')
-        if name not in self._ocr_init_results:
-            self._ocr_init_results[name] = f'lib={lib}, success'
-        logger.info(f'ocr_lib init {ocr_lib} {lib}, result: {self._ocr_init_results[name]}')
+        logger.info(f'ocr_lib init {ocr_lib} {lib}')
         return ocr_lib
 
     def nullable_frame(self):
