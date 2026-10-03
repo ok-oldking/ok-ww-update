@@ -7,7 +7,7 @@ from ok.util.GlobalConfig import create_basic_options
 from src.game_launcher import get_game_launch_arguments
 from src.task.process_feature import process_feature
 
-version = "v3.7.2"
+version = "v3.7.3"
 
 
 def _find_most_recently_run_pc_exe():
