@@ -7,7 +7,7 @@ from ok.util.GlobalConfig import create_basic_options
 from src.game_launcher import get_game_launch_arguments
 from src.task.process_feature import process_feature
 
-version = "v3.7.4"
+version = "v3.7.6"
 
 
 def _find_most_recently_run_pc_exe():
@@ -204,9 +204,10 @@ config = {
         'exe': 'Client-Win64-Shipping.exe',
         'hwnd_class': 'UnrealWindow',
         'interaction': 'PostMessage',
-        'capture_method': ['WGC', 'BitBlt_RenderFull'],  # Windows版本支持的话, 优先使用WGC, 否则使用BitBlt_Full
+        'capture_method': ['WGC', 'WGC_HDR','BitBlt_RenderFull'],  # Windows版本支持的话, 优先使用WGC, 否则使用BitBlt_Full
         'check_hdr': False,
         'force_no_hdr': False,
+        'check_auto_hdr': True,
         'check_night_light': True,
         'force_no_night_light': False,
     },

@@ -1,6 +1,7 @@
 import ctypes
 import importlib
 import importlib.util
+import ntpath
 import os
 import re
 import struct
@@ -24,7 +25,6 @@ NV_DRS_CLASSIC_SHARPENING_ENABLE_ID = 0x00598928  # Sharpening Filter - Enabled
 NV_DRS_IMAGE_SHARPENING_IDS = (NV_DRS_CLASSIC_SHARPENING_ENABLE_ID,)
 NV_DRS_RTX_DYNAMIC_VIBRANCE_ENABLE_ID = 0x00980880
 NV_DRS_RTX_HDR_ENABLE_ID = 0x00DD48FB  # RTX HDR - Enable
-NV_DRS_RTX_HDR_DRIVER_FLAGS_ID = 0x00432F84  # RTX HDR - Driver Flags (non-zero => driver HDR path)
 
 NVAPI_DRS_GET_CURRENT_GLOBAL_PROFILE = 0x617BFF9F
 NVAPI_DRS_FIND_PROFILE_BY_NAME = 0x7E4A9A0B
@@ -41,6 +41,7 @@ MONITOR_DEFAULTTONEAREST = 2
 NVIDIA_FILTER_PROFILE_LOG_MAX_AGE_SECONDS = 300
 NVIDIA_OVERLAY_LOG_TAIL_BYTES = 2 * 1024 * 1024
 NVIDIA_OVERLAY_TARGET_CONTEXT_LINES = 300
+AUTO_HDR_APP_OVERRIDE = 0x1000
 
 NV_DRS_DB_PATHS = (
     os.path.join(os.environ.get("ProgramData", ""), "NVIDIA Corporation", "Drs", "nvdrsdb0.bin"),
@@ -308,17 +309,22 @@ def get_enabled_gpu_driver_post_processing(target_exe_path: Optional[str] = None
 
     if not windows_hdr_active:
         logger.info("NVIDIA RTX HDR enabled: False (Windows HDR is not enabled)")
-    elif nvidia_filter_profile_active is not False:
+    elif nvidia_filter_profile_active is True:
         result = _run_gpu_feature_detector(
             "is_nvidia_rtx_hdr_enabled",
             lambda: is_nvidia_rtx_hdr_enabled(target_exe_path),
         )
         if result and result.enabled:
             enabled.append(result)
-    else:
+    elif nvidia_filter_profile_active is False:
         logger.info(
             "NVIDIA RTX HDR enabled: False "
             f"(NVIDIA filter profile is not in use: {nvidia_filter_profile_detail})"
+        )
+    else:
+        logger.info(
+            "NVIDIA RTX HDR enabled: Unknown "
+            f"(active NVIDIA filter profile not confirmed: {nvidia_filter_profile_detail})"
         )
 
     logger.info(f"GPU driver post-processing detected features: {enabled}")
@@ -344,6 +350,66 @@ def is_windows_hdr_enabled(target_hwnd: Optional[int] = None) -> Optional[GpuDri
         enabled=True,
         detail=detail,
     )
+
+
+def is_auto_hdr_enabled(target_exe_path: Optional[str] = None) -> Optional[bool]:
+    """Read the configured Auto HDR preference, not runtime activation.
+
+    A per-game opt-out or explicit override takes priority over global settings.
+    An ordinary per-game allow flag inherits the global setting.
+    These registry fields are undocumented Windows implementation details.
+    Return None when the registry cannot be read.
+    """
+    if os.name != "nt":
+        return None
+
+    import winreg
+
+    try:
+        with winreg.OpenKey(winreg.HKEY_CURRENT_USER,
+                            r"Software\Microsoft\DirectX\UserGpuPreferences") as key:
+            if target_exe_path:
+                name = ntpath.normpath(target_exe_path)
+                try:
+                    settings, _ = winreg.QueryValueEx(key, name)
+                except FileNotFoundError:
+                    settings = None
+                flags = _auto_hdr_flags(settings)
+                if flags is not None and (flags & AUTO_HDR_APP_OVERRIDE or not flags & 1):
+                    enabled = bool(flags & 1)
+                    logger.info(f"Windows Auto HDR configured: {enabled} ({name}: flags={flags:#x})")
+                    return enabled
+
+            try:
+                settings, _ = winreg.QueryValueEx(key, "DirectXUserGlobalSettings")
+            except FileNotFoundError:
+                return False
+            flags = _auto_hdr_flags(settings)
+            enabled = bool(flags & 1) if flags is not None else None
+            logger.info(f"Windows Auto HDR configured: {enabled} (global setting, no game override)")
+            return enabled
+    except FileNotFoundError:
+        return False
+    except OSError as e:
+        logger.debug(f"Windows Auto HDR check failed: {e}")
+        return None
+
+
+def _auto_hdr_flags(settings) -> Optional[int]:
+    if not isinstance(settings, str):
+        return None
+    for setting in settings.split(";"):
+        name, separator, value = setting.partition("=")
+        if separator and name.strip().lower() == "autohdrenable":
+            try:
+                flags = int(value.strip(), 0)
+            except ValueError:
+                return None
+            # Low bit: allow Auto HDR. Bit 0x1000: explicit per-game override.
+            # Observed on Windows build 26300: global off + 2097 => off;
+            # toggling the game's Auto HDR on changes 2097 to 6193 (0x1831).
+            return flags if flags >= 0 else None
+    return None
 
 
 def _log_nvidia_filter_profile_state(profile_in_use: Optional[bool], detail: str):
@@ -372,23 +438,28 @@ def is_nvidia_rtx_dynamic_vibrance_enabled() -> Optional[GpuDriverPostProcessing
 
 
 def is_nvidia_rtx_hdr_enabled(target_exe_path: Optional[str] = None) -> Optional[GpuDriverPostProcessing]:
+    # A configured NVIDIA App preference is not proof that Alt+F3 filters are
+    # active. In particular, nvdrsdb can contain [1, 1] while slot 0 is selected.
+    profile_active, detail = _nvidia_filter_profile_in_use_state(target_exe_path)
+    if profile_active is not True:
+        state = "False" if profile_active is False else "Unknown"
+        logger.info(f"NVIDIA RTX HDR enabled: {state} (active filter profile not confirmed: {detail})")
+        return None
+
     hit = _detect_nvidia_drs_flags(
         (NV_DRS_RTX_HDR_ENABLE_ID,),
         lambda value: value == 1,
         "RTX HDR",
+        allow_db_fallback=False,
     )
     if hit:
         _log_feature_enabled("NVIDIA RTX HDR", hit)
         return hit
 
-    result = _detect_nvidia_drs_flags(
-        (NV_DRS_RTX_HDR_DRIVER_FLAGS_ID,),
-        lambda value: value != 0,
-        "RTX HDR",
-        detail_suffix="driver_flags",
-    )
-    _log_feature_enabled("NVIDIA RTX HDR", result)
-    return result
+    # Driver flags and unscoped raw database records do not establish that the
+    # game's RTX HDR filter is enabled.
+    logger.info("NVIDIA RTX HDR enabled: Unknown (RTX HDR profile setting unavailable)")
+    return None
 
 
 def _log_feature_enabled(feature_name: str, result: Optional[GpuDriverPostProcessing]):
@@ -675,6 +746,14 @@ def _nvidia_filter_profile_slot_from_text(
     for line_number, line in enumerate(text.splitlines(), 1):
         normalized_line = _normalize_windows_path(line)
         has_target = bool(target and target in normalized_line)
+        # Overlay game metadata commonly uses only drsName, while procPath is
+        # JSON escaped. Do not substring-match arbitrary executable names.
+        game_name = re.search(r'"(?:drsName|procPath)"\s*:\s*"([^"\r\n]+)"', line, re.IGNORECASE)
+        if game_name and target:
+            name = _normalize_windows_path(game_name.group(1))
+            has_target = name == target or ("/" not in name and name == ntpath.basename(target))
+            if not has_target:
+                last_target_line = None
         if has_target:
             last_target_line = line_number
 
@@ -721,7 +800,7 @@ def _nvidia_filter_profile_slot_from_line(line: str) -> Optional[int]:
 
 
 def _normalize_windows_path(value: Optional[str]) -> str:
-    return (value or "").replace("\\", "/").lower()
+    return re.sub(r"[\\/]+", "/", value or "").lower()
 
 
 def _detect_nvidia_drs_flags(
@@ -729,6 +808,7 @@ def _detect_nvidia_drs_flags(
     is_enabled_value: Callable[[int], bool],
     feature_name: str,
     detail_suffix: str = "value",
+    allow_db_fallback: bool = True,
 ) -> Optional[GpuDriverPostProcessing]:
     api_hits = _scan_nvapi_profiles(setting_ids, is_enabled_value)
     if api_hits:
@@ -744,6 +824,9 @@ def _detect_nvidia_drs_flags(
             enabled=True,
             detail=detail,
         )
+
+    if not allow_db_fallback:
+        return None
 
     for setting_id in setting_ids:
         if _nv_drs_db_setting_is_on(setting_id, is_enabled_value):

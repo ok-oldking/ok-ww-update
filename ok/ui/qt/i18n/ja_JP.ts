@@ -590,7 +590,7 @@
         </message>
         <message>
             <source>WGC</source>
-            <translation>WGC - &gt;=Win10、高速</translation>
+            <translation>WGC - 高速、HDR 対応（AutoHDR 非対応）</translation>
         </message>
         <message>
             <source>BitBlt</source>
@@ -599,6 +599,22 @@
         <message>
             <source>DXGI</source>
             <translation>DXGI - 最も遅い、バックアップとして使用</translation>
+        </message>
+        <message>
+            <source>WGC - Fast, support HDR (not AutoHDR)</source>
+            <translation>WGC - 高速、HDR 対応（AutoHDR 非対応）</translation>
+        </message>
+        <message>
+            <source>WGC_HDR - Only use when using AutoHDR (Not Recommended)</source>
+            <translation>WGC_HDR - AutoHDR 使用時のみ使用（非推奨）</translation>
+        </message>
+        <message>
+            <source>Fast, support HDR (not AutoHDR)</source>
+            <translation>高速、HDR 対応（AutoHDR 非対応）</translation>
+        </message>
+        <message>
+            <source>Only use when using AutoHDR (Not Recommended)</source>
+            <translation>AutoHDR 使用時のみ使用（非推奨）</translation>
         </message>
     </context>
     <context>
@@ -839,6 +855,10 @@
         <message>
             <source>GPU Driver Warning</source>
             <translation>GPU ドライバー警告</translation>
+        </message>
+        <message>
+            <source>Try using Alt+F3 to turn it off.</source>
+            <translation>Alt+F3 を押して無効にしてみてください。</translation>
         </message>
     </context>
     <context>
@@ -1699,6 +1719,50 @@
         <message>
             <source>Enable TLS encryption (STARTTLS for 587, SMTPS for 465)</source>
             <translation>TLS 暗号化を有効化（ポート 587 は STARTTLS、465 は SMTPS）</translation>
+        </message>
+        <message>
+            <source>Auto HDR is enabled, tasks might not work correctly!</source>
+            <translation>自動HDRが有効です。タスクが正常に動作しない可能性があります！</translation>
+        </message>
+        <message>
+            <source>WGC - Fast, support HDR (not AutoHDR)</source>
+            <translation>WGC - 高速、HDR 対応（AutoHDR 非対応）</translation>
+        </message>
+        <message>
+            <source>WGC_HDR - Only use when using AutoHDR (Not Recommended)</source>
+            <translation>WGC_HDR - AutoHDR 使用時のみ使用（非推奨）</translation>
+        </message>
+        <message>
+            <source>Resolution {resolution} check failed, some tasks might not work correctly!</source>
+            <translation>解像度{resolution}のチェックに失敗しました。一部のタスクが正常に動作しない可能性があります！</translation>
+        </message>
+        <message>
+            <source>, the supported ratio is {supported_ratio}</source>
+            <translation>、サポートされている比率は{supported_ratio}です</translation>
+        </message>
+        <message>
+            <source>, the supported min resolution is {min_size}</source>
+            <translation>、サポートされている最小解像度は{min_size}です</translation>
+        </message>
+        <message>
+            <source>{vendor} {feature} is enabled and may cause malfunctions!</source>
+            <translation>{vendor} {feature} が有効になっており、誤動作の原因になる可能性があります！</translation>
+        </message>
+        <message>
+            <source>GPU Driver Warning</source>
+            <translation>GPU ドライバー警告</translation>
+        </message>
+        <message>
+            <source>Fast, support HDR (not AutoHDR)</source>
+            <translation>高速、HDR 対応（AutoHDR 非対応）</translation>
+        </message>
+        <message>
+            <source>Only use when using AutoHDR (Not Recommended)</source>
+            <translation>AutoHDR 使用時のみ使用（非推奨）</translation>
+        </message>
+        <message>
+            <source>Try using Alt+F3 to turn it off.</source>
+            <translation>Alt+F3 を押して無効にしてみてください。</translation>
         </message>
     </context>
     <context>
@@ -3689,6 +3753,50 @@
         <message>
             <source>Update available.</source>
             <translation>更新があります。</translation>
+        </message>
+        <message>
+            <source>Auto HDR is enabled, tasks might not work correctly!</source>
+            <translation>自動HDRが有効です。タスクが正常に動作しない可能性があります！</translation>
+        </message>
+        <message>
+            <source>WGC - Fast, support HDR (not AutoHDR)</source>
+            <translation>WGC - 高速、HDR 対応（AutoHDR 非対応）</translation>
+        </message>
+        <message>
+            <source>WGC_HDR - Only use when using AutoHDR (Not Recommended)</source>
+            <translation>WGC_HDR - AutoHDR 使用時のみ使用（非推奨）</translation>
+        </message>
+        <message>
+            <source>Resolution {resolution} check failed, some tasks might not work correctly!</source>
+            <translation>解像度{resolution}のチェックに失敗しました。一部のタスクが正常に動作しない可能性があります！</translation>
+        </message>
+        <message>
+            <source>, the supported ratio is {supported_ratio}</source>
+            <translation>、サポートされている比率は{supported_ratio}です</translation>
+        </message>
+        <message>
+            <source>, the supported min resolution is {min_size}</source>
+            <translation>、サポートされている最小解像度は{min_size}です</translation>
+        </message>
+        <message>
+            <source>{vendor} {feature} is enabled and may cause malfunctions!</source>
+            <translation>{vendor} {feature} が有効になっており、誤動作の原因になる可能性があります！</translation>
+        </message>
+        <message>
+            <source>GPU Driver Warning</source>
+            <translation>GPU ドライバー警告</translation>
+        </message>
+        <message>
+            <source>Fast, support HDR (not AutoHDR)</source>
+            <translation>高速、HDR 対応（AutoHDR 非対応）</translation>
+        </message>
+        <message>
+            <source>Only use when using AutoHDR (Not Recommended)</source>
+            <translation>AutoHDR 使用時のみ使用（非推奨）</translation>
+        </message>
+        <message>
+            <source>Try using Alt+F3 to turn it off.</source>
+            <translation>Alt+F3 を押して無効にしてみてください。</translation>
         </message>
     </context>
     <context>

@@ -591,7 +591,7 @@
         </message>
         <message>
             <source>WGC</source>
-            <translation>WGC - &gt;=Win10, 빠름</translation>
+            <translation>WGC - 빠름, HDR 지원 (AutoHDR 미지원)</translation>
         </message>
         <message>
             <source>BitBlt</source>
@@ -600,6 +600,22 @@
         <message>
             <source>DXGI</source>
             <translation>DXGI - 가장 느림, 백업으로 사용</translation>
+        </message>
+        <message>
+            <source>WGC - Fast, support HDR (not AutoHDR)</source>
+            <translation>WGC - 빠름, HDR 지원 (AutoHDR 미지원)</translation>
+        </message>
+        <message>
+            <source>WGC_HDR - Only use when using AutoHDR (Not Recommended)</source>
+            <translation>WGC_HDR - AutoHDR 사용 시에만 사용 (권장하지 않음)</translation>
+        </message>
+        <message>
+            <source>Fast, support HDR (not AutoHDR)</source>
+            <translation>빠름, HDR 지원 (AutoHDR 미지원)</translation>
+        </message>
+        <message>
+            <source>Only use when using AutoHDR (Not Recommended)</source>
+            <translation>AutoHDR 사용 시에만 사용 (권장하지 않음)</translation>
         </message>
     </context>
     <context>
@@ -840,6 +856,10 @@
         <message>
             <source>GPU Driver Warning</source>
             <translation>GPU 드라이버 경고</translation>
+        </message>
+        <message>
+            <source>Try using Alt+F3 to turn it off.</source>
+            <translation>Alt+F3을 눌러 꺼 보세요.</translation>
         </message>
     </context>
     <context>
@@ -1708,6 +1728,50 @@
         <message>
             <source>Enable TLS encryption (STARTTLS for 587, SMTPS for 465)</source>
             <translation>TLS 암호화 활성화 (587 포트는 STARTTLS, 465 포트는 SMTPS)</translation>
+        </message>
+        <message>
+            <source>Auto HDR is enabled, tasks might not work correctly!</source>
+            <translation>자동 HDR이 켜져 있습니다. 작업이 올바르게 작동하지 않을 수 있습니다!</translation>
+        </message>
+        <message>
+            <source>WGC - Fast, support HDR (not AutoHDR)</source>
+            <translation>WGC - 빠름, HDR 지원 (AutoHDR 미지원)</translation>
+        </message>
+        <message>
+            <source>WGC_HDR - Only use when using AutoHDR (Not Recommended)</source>
+            <translation>WGC_HDR - AutoHDR 사용 시에만 사용 (권장하지 않음)</translation>
+        </message>
+        <message>
+            <source>Resolution {resolution} check failed, some tasks might not work correctly!</source>
+            <translation>해상도 {resolution} 확인 실패, 일부 작업이 올바르게 작동하지 않을 수 있습니다!</translation>
+        </message>
+        <message>
+            <source>, the supported ratio is {supported_ratio}</source>
+            <translation>, 지원되는 비율은 {supported_ratio} 입니다</translation>
+        </message>
+        <message>
+            <source>, the supported min resolution is {min_size}</source>
+            <translation>, 지원되는 최소 해상도는 {min_size} 입니다</translation>
+        </message>
+        <message>
+            <source>{vendor} {feature} is enabled and may cause malfunctions!</source>
+            <translation>{vendor} {feature} 기능이 활성화되어 있어 오작동을 일으킬 수 있습니다!</translation>
+        </message>
+        <message>
+            <source>GPU Driver Warning</source>
+            <translation>GPU 드라이버 경고</translation>
+        </message>
+        <message>
+            <source>Fast, support HDR (not AutoHDR)</source>
+            <translation>빠름, HDR 지원 (AutoHDR 미지원)</translation>
+        </message>
+        <message>
+            <source>Only use when using AutoHDR (Not Recommended)</source>
+            <translation>AutoHDR 사용 시에만 사용 (권장하지 않음)</translation>
+        </message>
+        <message>
+            <source>Try using Alt+F3 to turn it off.</source>
+            <translation>Alt+F3을 눌러 꺼 보세요.</translation>
         </message>
     </context>
     <context>
@@ -3698,6 +3762,50 @@
         <message>
             <source>Update available.</source>
             <translation>업데이트가 있습니다.</translation>
+        </message>
+        <message>
+            <source>Auto HDR is enabled, tasks might not work correctly!</source>
+            <translation>자동 HDR이 켜져 있습니다. 작업이 올바르게 작동하지 않을 수 있습니다!</translation>
+        </message>
+        <message>
+            <source>WGC - Fast, support HDR (not AutoHDR)</source>
+            <translation>WGC - 빠름, HDR 지원 (AutoHDR 미지원)</translation>
+        </message>
+        <message>
+            <source>WGC_HDR - Only use when using AutoHDR (Not Recommended)</source>
+            <translation>WGC_HDR - AutoHDR 사용 시에만 사용 (권장하지 않음)</translation>
+        </message>
+        <message>
+            <source>Resolution {resolution} check failed, some tasks might not work correctly!</source>
+            <translation>해상도 {resolution} 확인 실패, 일부 작업이 올바르게 작동하지 않을 수 있습니다!</translation>
+        </message>
+        <message>
+            <source>, the supported ratio is {supported_ratio}</source>
+            <translation>, 지원되는 비율은 {supported_ratio} 입니다</translation>
+        </message>
+        <message>
+            <source>, the supported min resolution is {min_size}</source>
+            <translation>, 지원되는 최소 해상도는 {min_size} 입니다</translation>
+        </message>
+        <message>
+            <source>{vendor} {feature} is enabled and may cause malfunctions!</source>
+            <translation>{vendor} {feature} 기능이 활성화되어 있어 오작동을 일으킬 수 있습니다!</translation>
+        </message>
+        <message>
+            <source>GPU Driver Warning</source>
+            <translation>GPU 드라이버 경고</translation>
+        </message>
+        <message>
+            <source>Fast, support HDR (not AutoHDR)</source>
+            <translation>빠름, HDR 지원 (AutoHDR 미지원)</translation>
+        </message>
+        <message>
+            <source>Only use when using AutoHDR (Not Recommended)</source>
+            <translation>AutoHDR 사용 시에만 사용 (권장하지 않음)</translation>
+        </message>
+        <message>
+            <source>Try using Alt+F3 to turn it off.</source>
+            <translation>Alt+F3을 눌러 꺼 보세요.</translation>
         </message>
     </context>
     <context>
