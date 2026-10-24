@@ -7,7 +7,7 @@ from ok.util.GlobalConfig import create_basic_options
 from src.game_launcher import get_game_launch_arguments
 from src.task.process_feature import process_feature
 
-version = "v3.7.11-beta.1"
+version = "v3.7.11-beta.2"
 
 
 def _find_most_recently_run_pc_exe():
@@ -168,7 +168,10 @@ config = {
     'blur_area': blur_area,
     'gui_icon': 'icons/icon.png',
     'global_configs': [basic_config_option, key_config_option, char_config_option, monthly_card_config_option],
-    'custom_tabs': [["src.gui.CharacterCodeTab", "CharacterCodeTab"]],
+    'custom_tabs': [
+        ["src.gui.CharacterCodeTab", "CharacterCodeTab"],
+        ["src.gui.MultiAccountConfigTab", "MultiAccountConfigTab"],
+    ],
     'ocr': {
         'lib': 'onnxocr',
         'auto_simplify': True,
@@ -177,6 +180,7 @@ config = {
             'use_npu': True,
         }
     },
+    'plugin':True,
     'my_app': ['src.globals', 'Globals'],
     'start_timeout': 120,  # default 60
     'wait_until_settle_time': 0,
@@ -269,6 +273,7 @@ config = {
         ["src.task.ForgeryTask", "ForgeryTask"],
         ["src.task.SimulationTask", "SimulationTask"],
         ["src.task.MultiAccountDailyTask", "MultiAccountDailyTask"],
+        ["src.task.MultiAccountConfigTask", "MultiAccountConfigTask"],
         ["src.task.MergeEchoTask", "MergeEchoTask"],
         ["src.task.EnhanceEchoTask", "EnhanceEchoTask"],
         ["src.task.ChangeEchoTask", "ChangeEchoTask"],
