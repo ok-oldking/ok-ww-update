@@ -415,6 +415,7 @@ class WebRuntime:
             "running": self.executor.thread is not None and self.executor.thread.is_alive(),
             "starting": bool(start_controller.starting),
             "current_task": current.name if current else None,
+            "exclusive_owner": getattr(self.executor, "exclusive_owner", None),
             "task_count": len(self.executor.get_all_tasks()),
             "hotkey": hotkey if hotkey and hotkey != "None" else None,
         }
@@ -525,7 +526,8 @@ class WebRuntime:
             method = self.device_manager.capture_method
             if method is None:
                 raise RuntimeError("No capture method is active")
-            frame = method.get_frame()
+            from ok.device.capture_methods.base import CAPTURE_BUSY_WAIT
+            frame = method.get_frame(busy_wait=CAPTURE_BUSY_WAIT)
             if frame is None:
                 raise RuntimeError("Could not capture a frame")
             folder = Path(getattr(self.ok.screenshot, "screenshot_folder", None) or "screenshots")
@@ -985,7 +987,8 @@ class WebRuntime:
         capture_method = getattr(self.ok.device_manager, "capture_method", None)
         if capture_method is None:
             raise RuntimeError("No capture method available. Please start capture first.")
-        frame = capture_method.get_frame()
+        from ok.device.capture_methods.base import CAPTURE_BUSY_WAIT
+        frame = capture_method.get_frame(busy_wait=CAPTURE_BUSY_WAIT)
         if frame is None:
             raise RuntimeError("Failed to capture frame")
         from ok.util.blur import apply_blur_areas, get_blur_algorithm
@@ -1147,6 +1150,11 @@ class WebRuntime:
 
     def stop_task(self):
         self.executor.stop_current_task()
+        return self.status()
+
+    def release_exclusive(self):
+        if (owner := self.executor.exclusive_owner) is not None:
+            self.executor.release_exclusive(owner)
         return self.status()
 
     def close(self):
@@ -1554,6 +1562,10 @@ def create_web_app(config, ok_instance=None):
     async def stop_task():
         return runtime.stop_task()
 
+    @app.post("/api/executor/release")
+    async def release_executor():
+        return await asyncio.to_thread(runtime.release_exclusive)
+
     @app.websocket("/api/events")
     async def events(websocket: WebSocket, session_key: str = ""):
         await websocket.accept()
@@ -1617,7 +1629,7 @@ def create_web_app(config, ok_instance=None):
                     "kwargs": _json_value(message.kwargs),
                 }
                 if message.name in {
-                    "adb_devices", "executor_paused", "starting_emulator",
+                    "adb_devices", "executor_paused", "executor_exclusive", "starting_emulator",
                     "task", "task_list_updated",
                 }:
                     payload["ui"] = await asyncio.to_thread(runtime.capture_ui)

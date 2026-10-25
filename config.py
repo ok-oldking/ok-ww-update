@@ -7,7 +7,7 @@ from ok.util.GlobalConfig import create_basic_options
 from src.game_launcher import get_game_launch_arguments
 from src.task.process_feature import process_feature
 
-version = "v3.7.11-beta.3"
+version = "v3.7.11"
 
 
 def _find_most_recently_run_pc_exe():
@@ -125,10 +125,6 @@ def blur_area(width, height):
 
 
 basic_config_option = create_basic_options(enable_blur=True)
-basic_config_option.default_config['Game Package'] = 'hd'
-basic_config_option.config_type['Game Package'] = {
-    'type': 'drop_down', 'options': ['sd', 'hd', 'uhd'],
-}
 
 key_config_option = ConfigOption('Game Hotkey', {
     'Echo Key': 'q',
