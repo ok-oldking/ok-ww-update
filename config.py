@@ -7,7 +7,7 @@ from ok.util.GlobalConfig import create_basic_options
 from src.game_launcher import get_game_launch_arguments
 from src.task.process_feature import process_feature
 
-version = "v3.7.11"
+version = "v3.7.12-beta.1"
 
 
 def _find_most_recently_run_pc_exe():
@@ -194,7 +194,7 @@ config = {
                              'garden_unpause', 'garden_get_gold', 'garden_get_purple', 'garden_get_skip',
                              'garden_not_interested_confirm', 'garden_not_interested', 'a_garden_back',
                              'garden_get_confirm_gray', 'the_garden_max', 'garden_shop_close', 'garden_new_stage',
-                             'a_garden_restart', 'suisui_forte2', 'suisui_e1', 'e_forte', 'f_break_full']
+                             'a_garden_restart', 'suisui_forte2', 'e_forte', 'f_break_full']
     },
     'windows': {  # required  when supporting windows game
         'top_hwnd_class': [re.compile('CAgreementDlg'), re.compile('CLoginDlg_P_'),
@@ -275,6 +275,7 @@ config = {
         ["src.task.EnhanceEchoTask", "EnhanceEchoTask"],
         ["src.task.ChangeEchoTask", "ChangeEchoTask"],
         ["src.task.GardenTask", "GardenTask"],
+        ["src.task.TacetEliminationTask", "TacetEliminationTask"],
         # ["src.task.DiagnosisTask", "DiagnosisTask"],
     ], 'trigger_tasks': [
         ["src.task.AutoCombatTask", "AutoCombatTask"],

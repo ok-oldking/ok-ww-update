@@ -1124,6 +1124,16 @@ class BaseTask(OCR):
     def post_init(self):
         pass
 
+    def reload_tasks(self, tasks=None):
+        """Reload registered task instances/classes, or all tasks when omitted.
+
+        Example: self.reload_tasks([SomeTask, another_task]). The returned
+        ExecutorJob runs after the current task finishes; never wait for its
+        future from task code. Tasks sharing a module/plugin reload together.
+        """
+        from ok import og
+        return og.task_manager.reload_tasks(tasks)
+
     def create_shortcut(self):
         index = self.executor.onetime_tasks.index(self) + 1
         path = create_shortcut(None, f' {self.name}', arguments=f"-t {index}")
@@ -1293,13 +1303,6 @@ class BaseTask(OCR):
         for index, frame in enumerate(frames):
             communicate.screenshot.emit(frame, f'notification/notification_{index + 1}', False, None)
         communicate.notification.emit(message, title, error, tray, show_tab, params, frames)
-
-    def emit_web_event(self, event, payload=None):
-        """Publish a serializable event to this task's optional browser tab."""
-        tab = getattr(self, "web_tab", None)
-        if tab is None:
-            raise RuntimeError(f"{self.__class__.__name__} does not declare web_tab")
-        communicate.task_tab.emit(tab.id, str(event), payload)
 
     @property
     def enabled(self):
