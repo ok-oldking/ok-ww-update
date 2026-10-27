@@ -1416,3 +1416,21 @@ msgid ""
 "Start on the Tacet Elimination event screen. Complete unfinished stages and "
 "claim rewards."
 msgstr "イベント画面から開始し、未クリアのステージをクリアして報酬を受け取ります。実行中はゲームを前面に表示してください。"
+
+
+msgid "Roccia C6"
+msgstr "ロココ 6凸（メインアタッカー）"
+
+msgid "Export Selected"
+msgstr "選択したチームをエクスポート"
+
+
+msgid "Export Current"
+msgstr "現在のチームをエクスポート"
+
+
+msgid "No current team detected."
+msgstr "現在のチームを検出できませんでした。"
+
+msgid "Team Info"
+msgstr "チーム説明"

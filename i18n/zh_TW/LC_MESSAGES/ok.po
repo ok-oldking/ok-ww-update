@@ -1546,3 +1546,21 @@ msgid ""
 "Start on the Tacet Elimination event screen. Complete unfinished stages and "
 "claim rewards."
 msgstr "從無音消除活動目前介面開始，完成未完成的關卡並領取獎勵。執行期間需要遊戲位於前景。"
+
+
+msgid "Roccia C6"
+msgstr "洛可可6鏈（主輸出）"
+
+msgid "Export Selected"
+msgstr "匯出所選隊伍"
+
+
+msgid "Export Current"
+msgstr "匯出目前隊伍"
+
+
+msgid "No current team detected."
+msgstr "未偵測到目前隊伍。"
+
+msgid "Team Info"
+msgstr "隊伍說明"
