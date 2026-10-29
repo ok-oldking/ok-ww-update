@@ -12,7 +12,18 @@ The agent writes and edits project files, starts the local runtime, and reads lo
 
 MCP supplies skills and task execution, not a Python API catalog or `get_api` tool. Use the application's interpreter and inspect its installed package for exact signatures, docstrings, inherited methods, and return behavior. No library checkout is needed. See [agent prompts](en/agent-prompts.md) for API-only discovery and existing-task repair examples.
 
+The server's connection instructions direct agents to `get_skill("generate-templates")`
+before creating named image features: keep full screenshots and COCO annotations
+in `ok_templates`, export split features with `generate_templates`, and use
+`find_feature`/`find_one` in tasks. Those full screenshots can also be used directly
+as regression-test fixtures; `get_skill("write-test")` describes the test workflow.
+These instructions and skills come from the server's installed ok-script version.
+
 ## Install and start
+
+If the project has no environment or MCP runtime yet, start with the
+[agent setup guide](agent-setup.md). Its setup skills can be read before
+installation, without connecting to a running server.
 
 MCP is a required dependency of ok-script starting in 2.0.17. Install the capture
 and OCR profiles your project needs; no separate MCP extra is required.
