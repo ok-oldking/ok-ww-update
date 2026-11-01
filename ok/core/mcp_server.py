@@ -232,7 +232,7 @@ class LocalMcpServer:
         app = runtime.headless_app if runtime.should_init_task_manager_headless() else runtime.app
         self.runner = McpTaskRunner(runtime.task_executor, app, runtime.screenshot,
                                     config.get('artifact_directory', 'logs/mcp'), self._prepare_device,
-                                    task_manager=og.task_manager)
+                                    task_manager=og.task_manager, retention_days=config.get('retention_days', 7))
         self._server = None
         self._socket = None
         self._thread = None
@@ -289,9 +289,11 @@ class LocalMcpServer:
             self.port = self._socket.getsockname()[1]
             app = create_mcp_app(self.runner, self.token, self.port, self.exit_process)
             import uvicorn
+            # uvicorn's default log_config goes through dictConfig, which closes every
+            # existing handler in the process, including the ok-script.log file handler.
             self._server = uvicorn.Server(uvicorn.Config(
                 app, host='127.0.0.1', port=self.port, log_level='warning', access_log=False,
-                timeout_graceful_shutdown=5))
+                log_config=None, timeout_graceful_shutdown=5))
 
             def serve():
                 try:
