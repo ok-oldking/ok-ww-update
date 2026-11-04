@@ -3,7 +3,7 @@
 from PySide6.QtGui import QColor
 
 from ok.ui.qt.kit.icons import icon_file
-from ok.ui.qt.kit.theme import FONT_FAMILY, MONO_FONT_FAMILY, rgba
+from ok.ui.qt.kit.theme import FONT_FAMILY, MONO_FONT_FAMILY, Backdrop, rgba
 
 _TEMPLATE = """
 QWidget {{
@@ -12,11 +12,11 @@ QWidget {{
     font-size: 13px;
 }}
 QWidget#kitRoot, KitWindow {{
-    background: {window};
+    background: {window_bg};
 }}
 QWidget#kitSidebar {{
-    background: {sidebar};
-    border-right: 1px solid {separator};
+    background: {sidebar_bg};
+    border-right: 1px solid {frame_separator};
 }}
 
 QLabel {{ background: transparent; }}
@@ -109,12 +109,12 @@ TabItem QLabel#tabCount[selected="true"] {{ color: #FFFFFF; background: {accent_
 
 Pill {{
     font-size: 11.5px; font-weight: 500; border-radius: 6px; padding: 1px 8px;
-    color: {text_secondary}; background: {control}; border: 1px solid {border_strong};
+    color: {text_secondary}; background: transparent; border: 1px solid transparent;
 }}
-Pill[tone="accent"] {{ color: {text}; background: {accent_soft}; border-color: {accent_line}; }}
-Pill[tone="success"] {{ color: {success}; background: {success_soft}; border-color: {success_line}; }}
-Pill[tone="warning"] {{ color: {warning}; background: {warning_soft}; border-color: {warning_line}; }}
-Pill[tone="danger"] {{ color: {danger}; background: {danger_soft}; border-color: {danger_line}; }}
+Pill[tone="accent"] {{ color: {text}; }}
+Pill[tone="success"] {{ color: {success}; }}
+Pill[tone="warning"] {{ color: {warning}; }}
+Pill[tone="danger"] {{ color: {danger}; }}
 
 QLineEdit, QAbstractSpinBox, QTextEdit, QPlainTextEdit {{
     background: {control};
@@ -254,7 +254,7 @@ Toast {{
 }}
 
 QWidget#kitTitleBar {{
-    background: {sidebar};
+    background: {sidebar_bg};
     border-bottom: 1px solid {separator};
 }}
 QLabel#titleBadge {{
@@ -285,9 +285,9 @@ OptionCard:hover {{ border-color: {border_strong}; }}
 OptionCard[selected="true"] {{ background: {accent_soft_weak}; border-color: {accent_line}; }}
 QWidget#kitTitleBar[fused="true"] {{ border-bottom: 0; }}
 RunBar {{
-    background: {sidebar};
+    background: {sidebar_bg};
     border: 0;
-    border-bottom: 1px solid {separator};
+    border-bottom: 1px solid {frame_separator};
 }}
 ConnectionPill {{
     background: transparent;
@@ -423,7 +423,12 @@ def build_stylesheet(manager) -> str:
     accent = manager.accent()
     dark = manager.is_dark()
     success, warning, danger = (QColor(tokens[name]) for name in ("success", "warning", "danger"))
+    window_bg, sidebar_bg = (manager.background(name) for name in ("window", "sidebar"))
     return _TEMPLATE.format(
+        window_bg=rgba(window_bg, window_bg.alphaF()),
+        sidebar_bg=rgba(sidebar_bg, sidebar_bg.alphaF()),
+        # With a backdrop the content layer's own edge separates it from the frame.
+        frame_separator=tokens["separator"] if manager.backdrop() == Backdrop.NONE else "transparent",
         font=FONT_FAMILY,
         mono=MONO_FONT_FAMILY,
         accent=accent.name(),

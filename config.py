@@ -8,7 +8,7 @@ from src.game_launcher import get_game_launch_arguments
 from src.task.process_feature import process_feature
 from src.task.task_icons import task_icon
 
-version = "v3.7.16"
+version = "v3.7.17"
 
 
 def _find_most_recently_run_pc_exe():
@@ -179,9 +179,6 @@ config = {
     'blur_area': blur_area,
     'gui_icon': 'icons/icon.png',
     'global_configs': [basic_config_option, key_config_option, char_config_option, monthly_card_config_option],
-    'custom_tabs': [
-        ["src.gui.MultiAccountConfigTab", "MultiAccountConfigTab"],
-    ],
     'ocr': {
         'lib': 'onnxocr',
         'auto_simplify': True,
@@ -242,13 +239,11 @@ config = {
         'default': {
             'github': 'https://github.com/ok-oldking/ok-wuthering-waves',
             'discord': 'https://discord.gg/vVyCatEBgA',
-            'sponsor': 'https://patreon.com/ok_oldking',
             'faq': 'https://ok-script.com/ok-ww/'
         },
         'zh_CN': {
             'github': 'https://github.com/ok-oldking/ok-wuthering-waves',
             'discord': 'https://discord.gg/vVyCatEBgA',
-            'sponsor': 'https://afdian.com/a/ok-oldking',
             'faq': 'https://ok-script.com/ok-ww',
         },
     },
