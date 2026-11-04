@@ -8,7 +8,7 @@ from src.game_launcher import get_game_launch_arguments
 from src.task.process_feature import process_feature
 from src.task.task_icons import task_icon
 
-version = "v3.7.14-beta.7"
+version = "v3.7.16"
 
 
 def _find_most_recently_run_pc_exe():
@@ -180,7 +180,6 @@ config = {
     'gui_icon': 'icons/icon.png',
     'global_configs': [basic_config_option, key_config_option, char_config_option, monthly_card_config_option],
     'custom_tabs': [
-        ["src.gui.CharacterCodeTab", "CharacterCodeTab"],
         ["src.gui.MultiAccountConfigTab", "MultiAccountConfigTab"],
     ],
     'ocr': {
@@ -243,24 +242,19 @@ config = {
         'default': {
             'github': 'https://github.com/ok-oldking/ok-wuthering-waves',
             'discord': 'https://discord.gg/vVyCatEBgA',
-            'download': 'https://ok-script.com/ok-ww',
             'sponsor': 'https://patreon.com/ok_oldking',
-            'share': 'Download OK-WW from https://ok-script.com/ok-ww',
             'faq': 'https://ok-script.com/ok-ww/'
         },
         'zh_CN': {
             'github': 'https://github.com/ok-oldking/ok-wuthering-waves',
             'discord': 'https://discord.gg/vVyCatEBgA',
             'sponsor': 'https://afdian.com/a/ok-oldking',
-            'share': '下载okww https://ok-script.com/ok-ww',
             'faq': 'https://ok-script.com/ok-ww',
-            'qq_group': 'https://qm.qq.com/q/jw2NltIEWA',
-            'qq_channel': 'https://pd.qq.com/s/djmm6l44y',
         },
     },
     'about': """
     <p style="color:red;">
-    <strong>本软件是免费开源的。</strong> 如果你被收费，请立即退款。请访问QQ频道或GitHub下载最新的官方版本。
+    <strong>本软件是免费开源的。</strong> 如果你被收费，请立即退款。
     </p>
     <p style="color:red;">
         <strong>本软件仅供个人使用，用于学习Python编程、计算机视觉、UI自动化等。</strong> 请勿将其用于任何营利性或商业用途。
