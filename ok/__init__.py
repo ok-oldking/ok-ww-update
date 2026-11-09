@@ -724,7 +724,9 @@ class OK:
         logger.info(f"ok-script init {config.get('version')}, {sys.argv}, pid={os.getpid()} config: {config}")
         if self.debug:
             logger.debug(f"environment contains {len(os.environ)} entries")
-        pyappify.logger = logger
+        # pyappify logs printf-style (log.info("%s", value)), which ok's Logger does not accept.
+        from ok.util.logger import get_std_logger
+        pyappify.logger = get_std_logger('pyappify')
         logger.info(
             f"pyappify  app_version:{pyappify.app_version}, app_profile:{pyappify.app_profile}, pyappify_version:{pyappify.pyappify_version} pyappify_upgradeable:{pyappify.pyappify_upgradeable}, pyappify_executable:{pyappify.pyappify_executable}")
         self._runtime_start_lock = threading.Lock()
@@ -797,6 +799,11 @@ class OK:
                        and not self.args.get('headless', False))
             task_arg = self.args.get('task', 0)
             has_task = bool(task_arg) if isinstance(task_arg, str) else task_arg > 0
+            if not use_gui:
+                # The GUI creates shortcuts once its main window is shown.
+                from ok.util.GlobalConfig import basic_options
+                from ok.util.shortcut import create_app_shortcut
+                create_app_shortcut(self.global_config.get_config(basic_options))
             if not use_gui and has_task:
                 self.run_task(task_arg, exit_after=self.args.get('exit', False))
                 return
@@ -1251,21 +1258,10 @@ class OkGlobals:
         logger.info(f'app path {self.app_path}')
 
     def set_use_dml(self):
-        from ok.util.process import get_first_gpu_free_memory_mib
-
-        use_dml_txt_option = self.global_config.get_config('Basic Options').get('Use DirectML')
-        use_dml = False
-        if use_dml_txt_option == 'Auto':
-            nv_free_gpu_memory = get_first_gpu_free_memory_mib()
-            if nv_free_gpu_memory > 3000:
-                use_dml = True
-            logger.info(f'Use DirectML is auto nv_free_gpu_memory: {nv_free_gpu_memory}, use_dml: {use_dml}')
-        elif use_dml_txt_option == 'Yes':
-            use_dml = True
-        if use_dml:
-            window_build_number_str = platform.version().split(".")[-1]
-            window_build_number = int(window_build_number_str) if window_build_number_str.isdigit() else 0
-            use_dml = window_build_number >= 18362
+        # DirectML is no longer a setting: use it wherever Windows supports it (1903+).
+        window_build_number_str = platform.version().split(".")[-1]
+        window_build_number = int(window_build_number_str) if window_build_number_str.isdigit() else 0
+        use_dml = window_build_number >= 18362
         logger.info(f'use_dml result is {use_dml}')
         self.use_dml = use_dml
 

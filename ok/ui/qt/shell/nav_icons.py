@@ -1,6 +1,6 @@
 """Turn the icon values pages and apps pass into something the sidebar can draw."""
 
-from pathlib import Path
+from pathlib import Path, PurePath
 
 from PySide6.QtGui import QIcon
 
@@ -32,6 +32,8 @@ def nav_icon(source, base_dir=None, *, trim_transparent: bool = False):
         return source
     if isinstance(source, Icon):
         return _SEMANTIC.get(source, FALLBACK)
+    if isinstance(source, PurePath):
+        source = str(source)
     if isinstance(source, str):
         if source in ICON_NAMES:
             return source

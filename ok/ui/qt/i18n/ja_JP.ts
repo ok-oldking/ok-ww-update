@@ -1972,6 +1972,46 @@
             <source>Paused because browser exited</source>
             <translation>ブラウザーが終了したため一時停止しました</translation>
         </message>
+        <message>
+            <source>Create Start Menu Shortcut</source>
+            <translation>スタートメニューのショートカットを作成</translation>
+        </message>
+        <message>
+            <source>Create Desktop Shortcut</source>
+            <translation>デスクトップのショートカットを作成</translation>
+        </message>
+        <message>
+            <source>Create or update the Start Menu shortcut when the app starts</source>
+            <translation>アプリ起動時にスタートメニューのショートカットを作成または更新します</translation>
+        </message>
+        <message>
+            <source>Create or update the Desktop shortcut when the app starts</source>
+            <translation>アプリ起動時にデスクトップのショートカットを作成または更新します</translation>
+        </message>
+        <message>
+            <source>Game</source>
+            <translation>ゲーム</translation>
+        </message>
+        <message>
+            <source>Tasks</source>
+            <translation>タスク</translation>
+        </message>
+        <message>
+            <source>Application</source>
+            <translation>アプリ</translation>
+        </message>
+        <message>
+            <source>Shortcuts</source>
+            <translation>ショートカット</translation>
+        </message>
+        <message>
+            <source>Developer</source>
+            <translation>開発者</translation>
+        </message>
+        <message>
+            <source>Other</source>
+            <translation>その他</translation>
+        </message>
     </context>
     <context>
         <name>ScheduleTaskTable</name>

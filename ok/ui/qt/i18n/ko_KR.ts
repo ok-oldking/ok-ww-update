@@ -1977,6 +1977,46 @@
             <source>Paused because browser exited</source>
             <translation>브라우저가 종료되어 일시 중지되었습니다</translation>
         </message>
+        <message>
+            <source>Create Start Menu Shortcut</source>
+            <translation>시작 메뉴 바로 가기 만들기</translation>
+        </message>
+        <message>
+            <source>Create Desktop Shortcut</source>
+            <translation>바탕 화면 바로 가기 만들기</translation>
+        </message>
+        <message>
+            <source>Create or update the Start Menu shortcut when the app starts</source>
+            <translation>앱 시작 시 시작 메뉴 바로 가기를 만들거나 업데이트합니다</translation>
+        </message>
+        <message>
+            <source>Create or update the Desktop shortcut when the app starts</source>
+            <translation>앱 시작 시 바탕 화면 바로 가기를 만들거나 업데이트합니다</translation>
+        </message>
+        <message>
+            <source>Game</source>
+            <translation>게임</translation>
+        </message>
+        <message>
+            <source>Tasks</source>
+            <translation>작업</translation>
+        </message>
+        <message>
+            <source>Application</source>
+            <translation>앱</translation>
+        </message>
+        <message>
+            <source>Shortcuts</source>
+            <translation>바로 가기</translation>
+        </message>
+        <message>
+            <source>Developer</source>
+            <translation>개발자</translation>
+        </message>
+        <message>
+            <source>Other</source>
+            <translation>기타</translation>
+        </message>
     </context>
     <context>
         <name>ScheduleTaskTable</name>

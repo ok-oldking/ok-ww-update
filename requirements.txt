@@ -29,7 +29,9 @@ comtypes==1.4.16
 cryptography==50.0.2
     # via pyjwt
 dulwich==1.2.21
-    # via pyappify
+    # via
+    #   ok-ww (pyproject.toml)
+    #   pyappify
 h11==0.16.0
     # via
     #   httpcore2

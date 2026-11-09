@@ -1974,6 +1974,46 @@
             <source>Paused because browser exited</source>
             <translation>浏览器已退出，任务已暂停</translation>
         </message>
+        <message>
+            <source>Create Start Menu Shortcut</source>
+            <translation>创建开始菜单快捷方式</translation>
+        </message>
+        <message>
+            <source>Create Desktop Shortcut</source>
+            <translation>创建桌面快捷方式</translation>
+        </message>
+        <message>
+            <source>Create or update the Start Menu shortcut when the app starts</source>
+            <translation>应用启动时创建或更新开始菜单快捷方式</translation>
+        </message>
+        <message>
+            <source>Create or update the Desktop shortcut when the app starts</source>
+            <translation>应用启动时创建或更新桌面快捷方式</translation>
+        </message>
+        <message>
+            <source>Game</source>
+            <translation>游戏</translation>
+        </message>
+        <message>
+            <source>Tasks</source>
+            <translation>任务</translation>
+        </message>
+        <message>
+            <source>Application</source>
+            <translation>应用</translation>
+        </message>
+        <message>
+            <source>Shortcuts</source>
+            <translation>快捷方式</translation>
+        </message>
+        <message>
+            <source>Developer</source>
+            <translation>开发者</translation>
+        </message>
+        <message>
+            <source>Other</source>
+            <translation>其他</translation>
+        </message>
     </context>
     <context>
         <name>ScheduleTaskTable</name>

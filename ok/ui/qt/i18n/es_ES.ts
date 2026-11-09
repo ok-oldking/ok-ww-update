@@ -1976,6 +1976,46 @@
             <source>Paused because browser exited</source>
             <translation>En pausa porque se cerró el navegador</translation>
         </message>
+        <message>
+            <source>Create Start Menu Shortcut</source>
+            <translation>Crear acceso directo en el menú Inicio</translation>
+        </message>
+        <message>
+            <source>Create Desktop Shortcut</source>
+            <translation>Crear acceso directo en el escritorio</translation>
+        </message>
+        <message>
+            <source>Create or update the Start Menu shortcut when the app starts</source>
+            <translation>Crear o actualizar el acceso directo del menú Inicio al iniciar la aplicación</translation>
+        </message>
+        <message>
+            <source>Create or update the Desktop shortcut when the app starts</source>
+            <translation>Crear o actualizar el acceso directo del escritorio al iniciar la aplicación</translation>
+        </message>
+        <message>
+            <source>Game</source>
+            <translation>Juego</translation>
+        </message>
+        <message>
+            <source>Tasks</source>
+            <translation>Tareas</translation>
+        </message>
+        <message>
+            <source>Application</source>
+            <translation>Aplicación</translation>
+        </message>
+        <message>
+            <source>Shortcuts</source>
+            <translation>Accesos directos</translation>
+        </message>
+        <message>
+            <source>Developer</source>
+            <translation>Desarrollador</translation>
+        </message>
+        <message>
+            <source>Other</source>
+            <translation>Otros</translation>
+        </message>
     </context>
     <context>
         <name>ScheduleTaskTable</name>
