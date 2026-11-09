@@ -28,6 +28,8 @@ comtypes==1.4.16
     # via pycaw
 cryptography==50.0.2
     # via pyjwt
+dulwich==1.2.21
+    # via pyappify
 h11==0.16.0
     # via
     #   httpcore2
@@ -152,6 +154,8 @@ typing-inspection==0.4.4
     #   mcp
     #   pydantic
 urllib3==2.7.0
-    # via requests
+    # via
+    #   dulwich
+    #   requests
 uvicorn==0.54.0
     # via mcp
