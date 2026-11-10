@@ -34,7 +34,7 @@ from contextlib import contextmanager
 
 from . import _process
 from ._state import get_logger
-from .versions import is_release_version, sort_version_tags
+from .versions import is_release_version, select_kept_tags, sort_version_tags
 
 REMOTE_NAME = b"origin"
 TAG_PREFIX = b"refs/tags/"
@@ -328,10 +328,58 @@ def read_file_at(repo, commit_id, path):
 
 # --- fetching ---------------------------------------------------------------
 
+# Written by the launcher from pyappify.yml's ``keep_releases``.
+KEEP_RELEASES_CONFIG = (b"pyappify", b"keepreleases")
+
+
+def _positive_int(value):
+    try:
+        value = int(value)
+    except (TypeError, ValueError):
+        return None
+    return value if value > 0 else None
+
+
+def keep_releases(repo):
+    """How many releases the repository keeps, or None to keep every tag.
+
+    Read from the repository config the launcher writes, else from the
+    ``keep_releases`` of pyappify.yml at HEAD.
+    """
+    try:
+        return _positive_int(repo.get_config().get(*KEEP_RELEASES_CONFIG).decode("ascii"))
+    except (KeyError, UnicodeDecodeError):
+        pass
+    try:
+        yml = read_file_at(repo, repo.head(), PYAPPIFY_YML)
+    except KeyError:
+        return None
+    if yml is None:
+        return None
+    return _positive_int(parse_app_config(yml.decode("utf-8", "replace")).get("keep_releases"))
+
+
+def head_tags(repo):
+    """Names of the local tags pointing at HEAD."""
+    try:
+        head = repo.head()
+    except KeyError:
+        return set()
+    tags = set()
+    for name in repo.refs.as_dict(TAG_PREFIX):
+        try:
+            if repo.get_peeled(TAG_PREFIX + name) == head:
+                tags.add(name)
+        except KeyError:
+            pass
+    return tags
+
 
 def fetch_tags(repo_path, progress=None):
     """Mirror the remote's tags, like ``git fetch origin +refs/tags/*:refs/tags/* --prune``.
 
+    With ``keep_releases`` (see :func:`keep_releases`) only the kept version
+    tags are fetched and kept locally, plus the tags of the checked-out commit.
     Returns ``(updated, pruned)`` tag names.
     """
     dulwich = _dulwich()
@@ -349,10 +397,29 @@ def fetch_tags(repo_path, progress=None):
         def is_tag(ref, sha):
             return ref.startswith(TAG_PREFIX) and not ref.endswith(PEELED_SUFFIX) and sha
 
+        keep = keep_releases(repo)
+        protected = head_tags(repo)
+
+        def wanted_tags(refs):
+            """Remote tag names (bytes) to keep, mapped to their sha."""
+            tags = {
+                ref[len(TAG_PREFIX):]: sha for ref, sha in refs.items() if is_tag(ref, sha)
+            }
+            if keep is None:
+                return tags
+            kept = {
+                name.encode("utf-8")
+                for name in select_kept_tags(
+                    [name.decode("utf-8", "replace") for name in tags], keep
+                )
+            }
+            kept |= protected
+            return {name: sha for name, sha in tags.items() if name in kept}
+
         def determine_wants(refs, *_args, **_kwargs):
             wants = []
-            for ref, sha in refs.items():
-                if is_tag(ref, sha) and sha not in repo.object_store and sha not in wants:
+            for sha in wanted_tags(refs).values():
+                if sha not in repo.object_store and sha not in wants:
                     wants.append(sha)
             return wants
 
@@ -363,11 +430,7 @@ def fetch_tags(repo_path, progress=None):
             progress=progress,
             ref_prefix=[TAG_PREFIX],
         )
-        remote_tags = {
-            ref[len(TAG_PREFIX):]: sha
-            for ref, sha in result.refs.items()
-            if is_tag(ref, sha)
-        }
+        remote_tags = wanted_tags(result.refs)
         local_tags = repo.refs.as_dict(TAG_PREFIX)
 
         updated = []

@@ -39,6 +39,24 @@ def sort_version_tags(tag_names):
     )]
 
 
+def select_kept_tags(tag_names, keep):
+    """Return the version tags a repository keeps, newest first.
+
+    The ``keep`` newest releases and the prereleases newer than the oldest of
+    them, as the launcher's ``keep_releases`` does. With fewer releases than
+    ``keep`` every version tag is kept.
+    """
+    kept = []
+    releases = 0
+    for name in sort_version_tags(tag_names):
+        if releases >= keep:
+            break
+        if is_release_version(name):
+            releases += 1
+        kept.append(name)
+    return kept
+
+
 def is_greater_version(version1, version2):
     """
     Compares two semantic version strings.
