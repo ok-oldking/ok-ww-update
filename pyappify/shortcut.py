@@ -19,16 +19,32 @@ _RUN_AS_ADMIN_FLAG = 0x00002000  # RunAsUser: "Run as administrator"
 _INVALID_FILE_NAME_CHARS = '<>:"/\\|?*'
 _POWERSHELL_TIMEOUT_SECONDS = 30
 
-# Values arrive through environment variables, so nothing needs quoting.
+# Values arrive through environment variables, so nothing needs quoting. An
+# existing shortcut that already matches is left untouched; the script prints
+# WRITTEN when it saved the file and UNCHANGED otherwise.
 _CREATE_SHORTCUT_SCRIPT = r"""
 $ErrorActionPreference = 'Stop'
-$shortcut = (New-Object -ComObject WScript.Shell).CreateShortcut($env:PYAPPIFY_SHORTCUT_PATH)
+$path = $env:PYAPPIFY_SHORTCUT_PATH
+$icon = $env:PYAPPIFY_SHORTCUT_ICON
+$expectedIcon = if ($icon) { "$icon,0" } else { ",0" }
+$exists = Test-Path -LiteralPath $path
+$shortcut = (New-Object -ComObject WScript.Shell).CreateShortcut($path)
+if ($exists -and
+    $shortcut.TargetPath -eq $env:PYAPPIFY_SHORTCUT_TARGET -and
+    $shortcut.Arguments -ceq [string]$env:PYAPPIFY_SHORTCUT_ARGUMENTS -and
+    $shortcut.WorkingDirectory -eq $env:PYAPPIFY_SHORTCUT_WORKING_DIR -and
+    $shortcut.Description -ceq $env:PYAPPIFY_SHORTCUT_NAME -and
+    $shortcut.IconLocation -eq $expectedIcon) {
+    'UNCHANGED'
+    exit 0
+}
 $shortcut.TargetPath = $env:PYAPPIFY_SHORTCUT_TARGET
 $shortcut.Arguments = $env:PYAPPIFY_SHORTCUT_ARGUMENTS
 $shortcut.WorkingDirectory = $env:PYAPPIFY_SHORTCUT_WORKING_DIR
 $shortcut.Description = $env:PYAPPIFY_SHORTCUT_NAME
-if ($env:PYAPPIFY_SHORTCUT_ICON) { $shortcut.IconLocation = $env:PYAPPIFY_SHORTCUT_ICON }
+$shortcut.IconLocation = $expectedIcon
 $shortcut.Save()
+'WRITTEN'
 """
 
 
@@ -60,8 +76,11 @@ def create_shortcut(
       with an .ico extension), else the target's own icon.
     - ``run_as_admin``: the current profile's ``admin`` (or ``uac``) setting.
 
-    Shortcuts go to the Start Menu and/or Desktop, or to ``directories`` when
-    given. Returns the paths of the shortcuts written.
+    Shortcuts go to the Start Menu (``start_menu``) and/or Desktop
+    (``desktop``), or to ``directories`` when given; a location set to False
+    is neither created nor updated. A shortcut that already matches is left
+    untouched. Returns the paths of the shortcuts that were created or
+    changed, so an empty list means nothing needed writing.
     """
     if os.name != "nt":
         raise OSError("Shortcuts can only be created on Windows")
@@ -76,7 +95,8 @@ def refresh_shortcuts(target=None, arguments=None, working_dir=None, profile=Non
 
     The Start Menu shortcut is always written; the Desktop one is only updated
     when it already exists, so a shortcut the user deleted is not recreated.
-    Arguments default as in :func:`create_shortcut`. Returns the paths written.
+    Arguments default as in :func:`create_shortcut`. Returns the paths of the
+    shortcuts that were created or changed.
     """
     if os.name != "nt":
         return []
@@ -124,7 +144,7 @@ def _write_all(directories, settings):
     for directory in directories:
         os.makedirs(directory, exist_ok=True)
         shortcut_path = os.path.join(directory, settings["name"] + ".lnk")
-        _write_shortcut(
+        changed = _write_shortcut(
             shortcut_path,
             settings["target"],
             settings["arguments"],
@@ -133,7 +153,8 @@ def _write_all(directories, settings):
             settings["icon"],
             settings["run_as_admin"],
         )
-        written.append(shortcut_path)
+        if changed:
+            written.append(shortcut_path)
     return written
 
 
@@ -203,11 +224,7 @@ def _powershell():
 
 
 def _write_shortcut(path, target, arguments, working_dir, name, icon, run_as_admin):
-    log = get_logger()
-    log.info(
-        "pyappify writing shortcut %s -> %s %s (working directory: %s, icon: %s, run as admin: %s)",
-        path, target, arguments, working_dir, icon or None, run_as_admin,
-    )
+    """Create or update one shortcut; return whether the file was created or changed."""
     env = os.environ.copy()
     env.update({
         "PYAPPIFY_SHORTCUT_PATH": path,
@@ -232,15 +249,31 @@ def _write_shortcut(path, target, arguments, working_dir, name, icon, run_as_adm
         raise OSError("Failed to write shortcut {}: {}".format(
             path, (completed.stderr or completed.stdout).strip()
         ))
-    _set_run_as_admin(path, run_as_admin)
+    saved = "WRITTEN" in completed.stdout
+    admin_changed = _set_run_as_admin(path, run_as_admin)
+    changed = saved or admin_changed
+    log = get_logger()
+    if changed:
+        log.info(
+            "pyappify wrote shortcut %s -> %s %s (working directory: %s, icon: %s, run as admin: %s)",
+            path, target, arguments, working_dir, icon or None, run_as_admin,
+        )
+    else:
+        log.debug("pyappify shortcut %s is up to date", path)
+    return changed
 
 
 def _set_run_as_admin(path, run_as_admin):
-    """Set or clear "Run as administrator", which WScript.Shell cannot do."""
+    """Set or clear "Run as administrator", which WScript.Shell cannot do.
+
+    Returns whether the flag had to change.
+    """
     with open(path, "r+b") as link_file:
         link_file.seek(_LINK_FLAGS_OFFSET)
         flags = int.from_bytes(link_file.read(4), "little")
         updated = flags | _RUN_AS_ADMIN_FLAG if run_as_admin else flags & ~_RUN_AS_ADMIN_FLAG
-        if updated != flags:
-            link_file.seek(_LINK_FLAGS_OFFSET)
-            link_file.write(updated.to_bytes(4, "little"))
+        if updated == flags:
+            return False
+        link_file.seek(_LINK_FLAGS_OFFSET)
+        link_file.write(updated.to_bytes(4, "little"))
+        return True

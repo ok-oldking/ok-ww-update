@@ -2,10 +2,13 @@
 
 Started by :func:`pyappify.standalone.update_to_version` as::
 
-    python -m pyappify.standalone_updater <repo>/.git/pyappify/update-job.json
+    python -m pyappify.standalone_updater <state dir>/update-job.json
 
 in its own console window, so the user can watch the update log; the same log
-is appended to ``.git/pyappify/update.log``. Steps:
+is appended to ``update.log`` next to the job. The state dir is
+``.git/pyappify`` for a plain clone and ``<app>/pyappify-update`` for the
+launcher's layout, whose older installs are converted to the shared-checkout
+layout first (see :mod:`pyappify.standalone`). Steps:
 
 1. wait for the app to exit, stopping it after a grace period (as the launcher
    stops the app before updating);
@@ -72,6 +75,13 @@ def run_job(job, log):
     if not stop_app(job.get("pid"), job.get("exit_timeout", standalone.APP_EXIT_TIMEOUT_SECONDS), log):
         return False
 
+    if standalone.is_launcher_layout(repo_path) and not standalone.is_bare_repo(repo_path):
+        try:
+            standalone.migrate_to_bare_layout(repo_path, log)
+        except Exception as error:
+            log.error("Could not convert %s to the shared-checkout layout: %s", repo_path, error)
+            return False
+
     try:
         apply_version(repo_path, version, job.get("profile"), log)
     except Exception as error:
@@ -101,7 +111,7 @@ def refresh_shortcuts(job, log):
         paths = shortcut.refresh_shortcuts(
             target=argv[0],
             arguments=argv[1:],
-            working_dir=relaunch_info.get("cwd") or job["repo_path"],
+            working_dir=relaunch_info.get("cwd") or standalone.app_files_dir(job["repo_path"]),
             profile=job.get("profile") or "",
         )
     except Exception as error:
@@ -109,6 +119,8 @@ def refresh_shortcuts(job, log):
         return []
     for path in paths:
         log.info("Refreshed shortcut %s", path)
+    if not paths:
+        log.info("Shortcuts are up to date.")
     return paths
 
 
@@ -131,9 +143,14 @@ def stop_app(pid, grace_seconds, log):
 
 
 def apply_version(repo_path, version, profile, log):
-    """Check out ``version``, update submodules and sync requirements if needed."""
+    """Check out ``version``, update submodules and sync requirements if needed.
+
+    In the launcher's layout tracked files are forced to the new version, as
+    the launcher does; a plain clone with local changes is not touched.
+    """
+    managed = standalone.is_launcher_layout(repo_path)
     with standalone.open_repo(repo_path) as repo:
-        if standalone.has_local_changes(repo):
+        if not managed and standalone.has_local_changes(repo):
             raise standalone.StandaloneUpdateError(
                 "tracked files have local changes; commit or stash them first"
             )
@@ -142,19 +159,20 @@ def apply_version(repo_path, version, profile, log):
         old_spec, _old_args, old_content = standalone.requirements_at(repo, old_commit, profile)
 
         log.info("Checking out %s (%s)...", version, target_commit.decode("ascii")[:12])
-        _checkout(repo, target_commit, log)
+        _checkout(repo, target_commit, log, force=managed)
 
         new_spec, new_args, new_content = standalone.requirements_at(repo, target_commit, profile)
 
+    files_dir = standalone.app_files_dir(repo_path)
     if not new_spec:
         log.info("No requirements configured. Skipping dependency sync.")
     elif old_spec != new_spec:
         log.info("Requirements changed from '%s' to '%s'. Syncing dependencies.", old_spec, new_spec)
-        pip_install(repo_path, new_spec, new_args, log)
+        pip_install(files_dir, new_spec, new_args, log)
     elif old_content != new_content:
         changed_file = new_spec if new_spec.endswith(".txt") else "pyproject.toml"
         log.info("%s changed. Syncing dependencies.", changed_file)
-        pip_install(repo_path, new_spec, new_args, log)
+        pip_install(files_dir, new_spec, new_args, log)
     else:
         log.info("Requirements are up to date. Skipping dependency sync.")
 
@@ -163,7 +181,12 @@ def rollback(repo_path, previous_commit, log):
     log.info("Rolling back to %s...", previous_commit[:12])
     try:
         with standalone.open_repo(repo_path) as repo:
-            _checkout(repo, previous_commit.encode("ascii"), log)
+            _checkout(
+                repo,
+                previous_commit.encode("ascii"),
+                log,
+                force=standalone.is_launcher_layout(repo_path),
+            )
     except Exception as error:
         log.error("Rollback failed: %s", error)
         return False
@@ -171,11 +194,12 @@ def rollback(repo_path, previous_commit, log):
     return True
 
 
-def _checkout(repo, commit_id, log):
+def _checkout(repo, commit_id, log, force=False):
     porcelain = standalone._dulwich().porcelain
-    porcelain.checkout(repo, repo[commit_id])
+    porcelain.checkout(repo, repo[commit_id], force=force)
     if os.path.isfile(os.path.join(repo.path, ".gitmodules")):
         log.info("Updating submodules...")
+        standalone.link_submodule_work_trees(repo, log)
         porcelain.submodule_update(repo, init=True, recursive=True)
 
 

@@ -1,9 +1,20 @@
 """Updating a git checkout of the app without the PyAppify launcher.
 
-Used when the app runs from a plain git clone: no launcher executable was found
-and ``PYAPPIFY_VERSION`` is not set. Versions are the checkout's version tags,
-the same ones the launcher uses. Git access goes through Dulwich, so git itself
-does not need to be installed (``pip install "pyappify[standalone]"``).
+Used when no launcher executable was found and ``PYAPPIFY_VERSION`` is not
+set. Versions are the checkout's version tags, the same ones the launcher
+uses. Git access goes through Dulwich, so git itself does not need to be
+installed (``pip install "pyappify[standalone]"``).
+
+Two layouts are supported:
+
+- a plain git clone the app runs from (updates refuse to overwrite local
+  changes to tracked files);
+- the launcher's layout, where the app runs from ``<app>/working`` and
+  ``<app>/repo`` is a bare repository whose work tree is ``working``. Files the
+  app creates in ``working`` are kept; tracked files are forced to the new
+  version, as the launcher does. An install from older launchers, where
+  ``repo`` was a full clone copied into ``working``, is converted to this
+  layout by the first update.
 
 ``update_to_version`` only prepares the update while the app runs. The checkout
 and the dependency sync happen in ``python -m pyappify.standalone_updater``,
@@ -13,6 +24,7 @@ which opens its own console window for the log, waits for the app to exit
 import functools
 import json
 import os
+import shutil
 import subprocess
 import sys
 import threading
@@ -34,6 +46,13 @@ STATE_DIR_NAME = "pyappify"
 JOB_FILE_NAME = "update-job.json"
 LOG_FILE_NAME = "update.log"
 APP_EXIT_TIMEOUT_SECONDS = 10
+
+# The launcher's layout: <app>/repo (bare git data) and <app>/working (files).
+REPO_DIR_NAME = "repo"
+WORKING_DIR_NAME = "working"
+MIGRATING_GIT_DIR_NAME = "repo.git.migrating"
+OLD_CHECKOUT_DIR_NAME = "repo.checkout.old"
+LAYOUT_STATE_DIR_NAME = "pyappify-update"
 
 
 class StandaloneUpdateError(RuntimeError):
@@ -69,15 +88,22 @@ def _dulwich():
 
 
 def find_repo_path(start_dir=None, environ=None):
-    """Return the git checkout the app runs from.
+    """Return the app's repository: a plain checkout's root, or ``<app>/repo``.
 
     ``PYAPPIFY_REPO_PATH`` overrides the search upward from ``start_dir`` (the
-    current directory by default).
+    current directory by default). A ``working`` folder with a ``repo`` folder
+    next to it is the launcher's layout.
     """
     environ = os.environ if environ is None else environ
     dulwich = _dulwich()
     configured = environ.get("PYAPPIFY_REPO_PATH")
     start = configured or start_dir or os.getcwd()
+    if configured and is_launcher_layout(configured):
+        return os.path.abspath(configured)
+    if not configured:
+        layout_repo = find_launcher_layout(start)
+        if layout_repo:
+            return layout_repo
     try:
         if configured:
             repo = dulwich.Repo(configured)
@@ -94,18 +120,165 @@ def find_repo_path(start_dir=None, environ=None):
         repo.close()
 
 
+def find_launcher_layout(start_dir):
+    """Return ``<app>/repo`` when ``start_dir`` is inside ``<app>/working``, else None."""
+    path = os.path.abspath(start_dir)
+    while True:
+        if os.path.basename(path) == WORKING_DIR_NAME:
+            base = os.path.dirname(path)
+            repo_path = os.path.join(base, REPO_DIR_NAME)
+            if os.path.isdir(os.path.join(base, MIGRATING_GIT_DIR_NAME)):
+                # A migration was interrupted; finishing it restores ``repo``.
+                migrate_to_bare_layout(repo_path)
+            if is_launcher_layout(repo_path):
+                return repo_path
+        parent = os.path.dirname(path)
+        if parent == path:
+            return None
+        path = parent
+
+
+def is_bare_repo(repo_path):
+    """Return whether ``repo_path`` is a git directory without its own checkout."""
+    return os.path.isfile(os.path.join(repo_path, "HEAD")) and not os.path.exists(
+        os.path.join(repo_path, ".git")
+    )
+
+
+def is_launcher_layout(repo_path):
+    """Return whether ``repo_path`` is ``<app>/repo`` of the launcher's layout.
+
+    That is a bare repository named ``repo``, or (from older launchers) a full
+    clone named ``repo`` with a ``working`` copy next to it.
+    """
+    repo_path = os.path.abspath(repo_path)
+    if os.path.basename(repo_path) != REPO_DIR_NAME:
+        return False
+    if is_bare_repo(repo_path):
+        return True
+    return os.path.isdir(os.path.join(repo_path, ".git")) and os.path.isdir(
+        work_tree_for(repo_path)
+    )
+
+
+def work_tree_for(repo_path):
+    """The ``working`` folder next to ``<app>/repo``."""
+    return os.path.join(os.path.dirname(os.path.abspath(repo_path)), WORKING_DIR_NAME)
+
+
+def app_files_dir(repo_path):
+    """The folder holding the app's files: ``working`` for the launcher's layout."""
+    return work_tree_for(repo_path) if is_launcher_layout(repo_path) else repo_path
+
+
 @contextmanager
 def open_repo(repo_path):
-    repo = _dulwich().Repo(repo_path)
+    """Open a repository; a bare launcher ``repo`` gets ``working`` as its work tree."""
+    dulwich = _dulwich()
+    if is_launcher_layout(repo_path) and is_bare_repo(repo_path):
+        work_tree = work_tree_for(repo_path)
+        os.makedirs(work_tree, exist_ok=True)
+        repo = dulwich.Repo(controldir=repo_path, worktree=work_tree)
+    else:
+        repo = dulwich.Repo(repo_path)
     try:
         yield repo
     finally:
         repo.close()
 
 
-def state_dir(repo):
-    """Directory inside .git for the update job and log, never tracked by git."""
-    return os.path.join(repo.controldir(), STATE_DIR_NAME)
+def state_dir(repo_path):
+    """Directory for the update job and log, never tracked by git.
+
+    Inside ``.git`` for a plain checkout. For the launcher's layout it is next
+    to ``repo``, which the updater may move while converting an old install.
+    """
+    if is_launcher_layout(repo_path):
+        return os.path.join(os.path.dirname(os.path.abspath(repo_path)), LAYOUT_STATE_DIR_NAME)
+    with open_repo(repo_path) as repo:
+        return os.path.join(repo.controldir(), STATE_DIR_NAME)
+
+
+def migrate_to_bare_layout(repo_path, log=None):
+    """Convert an older launcher install into the bare ``repo`` layout.
+
+    Older launchers kept a full clone in ``repo`` and copied its files into
+    ``working``. The clone's git data becomes the bare ``repo`` and its
+    duplicate files are deleted; the index is kept, since it describes the
+    files that were copied into ``working``. Matches the launcher's migration,
+    so either one can finish a migration the other started.
+    """
+    log = log or get_logger()
+    base = os.path.dirname(os.path.abspath(repo_path))
+    git_dir = os.path.join(repo_path, ".git")
+    moved_git_dir = os.path.join(base, MIGRATING_GIT_DIR_NAME)
+    old_checkout = os.path.join(base, OLD_CHECKOUT_DIR_NAME)
+
+    if os.path.isdir(git_dir):
+        log.info("Moving %s to the shared-checkout layout (git data in repo, app files in working)...", repo_path)
+        _set_core_bare(os.path.join(git_dir, "config"))
+        os.rename(git_dir, moved_git_dir)
+    if os.path.isdir(moved_git_dir):
+        if os.path.exists(repo_path):
+            if os.path.exists(old_checkout):
+                shutil.rmtree(old_checkout)
+            os.rename(repo_path, old_checkout)
+        os.rename(moved_git_dir, repo_path)
+        with open_repo(repo_path) as repo:
+            link_submodule_work_trees(repo, log)
+    if os.path.exists(old_checkout):
+        shutil.rmtree(old_checkout, ignore_errors=True)
+        if os.path.exists(old_checkout):
+            log.warning("Could not remove the old checkout at %s; it can be deleted manually.", old_checkout)
+        else:
+            log.info("Removed the old duplicate checkout at %s.", old_checkout)
+
+
+def _set_core_bare(config_path):
+    from dulwich.config import ConfigFile
+
+    config = ConfigFile.from_path(config_path)
+    config.set((b"core",), b"bare", True)
+    config.write_to_path(config_path)
+
+
+def link_submodule_work_trees(repo, log=None):
+    """Point each submodule folder in the work tree at its git data in ``<repo>/modules``.
+
+    Like the launcher: after converting an old install (whose copies skipped
+    ``.git``) a submodule folder in ``working`` has no ``.git`` link, so it is
+    added and the submodule's ``core.worktree`` is pointed at ``working``.
+    """
+    from dulwich.config import ConfigFile, read_submodules
+
+    log = log or get_logger()
+    work_tree = os.path.abspath(repo.path)
+    gitmodules = os.path.join(work_tree, ".gitmodules")
+    if not os.path.isfile(gitmodules):
+        return
+    git_dir = os.path.abspath(repo.controldir())
+    for path, _url, name in read_submodules(gitmodules):
+        path = path.decode("utf-8")
+        name = name.decode("utf-8")
+        module_work_tree = os.path.join(work_tree, path)
+        if os.path.exists(os.path.join(module_work_tree, ".git")):
+            continue
+        module_git_dir = os.path.join(git_dir, "modules", name)
+        if not os.path.isfile(os.path.join(module_git_dir, "HEAD")):
+            continue
+        os.makedirs(module_work_tree, exist_ok=True)
+        link = os.path.relpath(module_git_dir, module_work_tree).replace(os.sep, "/")
+        with open(os.path.join(module_work_tree, ".git"), "w", encoding="utf-8") as link_file:
+            link_file.write("gitdir: {}\n".format(link))
+        config_path = os.path.join(module_git_dir, "config")
+        config = ConfigFile.from_path(config_path)
+        config.set(
+            (b"core",),
+            b"worktree",
+            os.path.relpath(module_work_tree, module_git_dir).replace(os.sep, "/").encode("utf-8"),
+        )
+        config.write_to_path(config_path)
+        log.info("Linked submodule '%s' at %s to %s", name, module_work_tree, module_git_dir)
 
 
 def local_version_tags(repo):
@@ -453,7 +626,9 @@ def update_to_version(
 
     with open_repo(repo_path) as repo:
         target_commit = tag_commit(repo, version)
-        if has_local_changes(repo):
+        # The launcher's layout is managed: tracked files are forced to the new
+        # version, as the launcher does. A plain clone may hold the user's work.
+        if not is_launcher_layout(repo_path) and has_local_changes(repo):
             raise StandaloneUpdateError(
                 "Cannot update {}: tracked files have local changes. Commit or "
                 "stash them first.".format(repo_path)
@@ -464,7 +639,7 @@ def update_to_version(
             update_note = []
         else:
             update_note = notes_for_update(repo, target_commit, current_commit)
-        job_dir = state_dir(repo)
+    job_dir = state_dir(repo_path)
 
     job = {
         "repo_path": repo_path,
@@ -488,7 +663,7 @@ def update_to_version(
         json.dump(job, job_file, indent=2, ensure_ascii=False)
 
     _process._raise_if_exit_requested(exit_event)
-    _start_updater(job_path, repo_path)
+    _start_updater(job_path)
     log.info("pyappify started the standalone updater for %s; the app will restart", version)
     return {
         "updated": True,
@@ -514,14 +689,17 @@ def _console_python():
     return executable
 
 
-def _start_updater(job_path, repo_path):
+def _start_updater(job_path):
     package_parent = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     env = os.environ.copy()
     env["PYTHONPATH"] = os.pathsep.join(
         path for path in (package_parent, env.get("PYTHONPATH")) if path
     )
     env["PYTHONIOENCODING"] = "utf-8"
-    kwargs = {"cwd": repo_path, "env": env, "close_fds": True}
+    # Started from the job's folder, never from inside ``repo``: Windows will
+    # not move a folder that is a process's current directory, and the updater
+    # may move ``repo`` while converting an old launcher install.
+    kwargs = {"cwd": os.path.dirname(job_path), "env": env, "close_fds": True}
     if os.name == "nt":
         kwargs["creationflags"] = (
             subprocess.CREATE_NEW_CONSOLE | subprocess.CREATE_NEW_PROCESS_GROUP
