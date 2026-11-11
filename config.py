@@ -8,7 +8,7 @@ from src.game_launcher import get_game_launch_arguments
 from src.task.process_feature import process_feature
 from src.task.task_icons import task_icon
 
-version = "v3.7.20-beta.7"
+version = "v3.7.20-beta.8"
 
 
 def _find_most_recently_run_pc_exe():
