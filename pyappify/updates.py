@@ -6,7 +6,8 @@ With the PyAppify launcher present, requests go to the launcher. Without it
 """
 import os
 
-from . import _process, launcher, standalone
+from . import _process, launcher, standalone, pip_index
+from .pip_index import PIP_INDEX_URLS
 from ._state import pkg
 from .versions import is_supported_pyappify_version
 
@@ -19,6 +20,17 @@ def uses_launcher():
     """Return whether the app was started by, or ships with, the PyAppify launcher."""
     state = pkg()
     return bool(state.pyappify_version or state.pyappify_executable)
+
+
+def is_local_checkout():
+    """Return whether the app runs from a plain git clone, without the launcher.
+
+    Such a checkout also lists its default branch, local branches and pull
+    requests as versions when ``release_only`` is false.
+    """
+    if uses_launcher() or _is_python_test():
+        return False
+    return standalone.is_plain_checkout()
 
 
 def get_version_list(
@@ -141,3 +153,63 @@ def _get_mock_version_list(number_versions):
             ],
         })
     return versions[:number_versions]
+
+
+_test_pip_index_url = ""
+
+
+def _require_pip_index_api():
+    if os.environ.get("PYAPPIFY_PIP_INDEX_API") != "1":
+        raise RuntimeError("This PyAppify launcher does not support choosing the pip index")
+
+
+def _validate_pip_index_response(response):
+    if (not isinstance(response, dict)
+            or not isinstance(response.get("pip_index_url"), str)
+            or not isinstance(response.get("default"), str)
+            or not isinstance(response.get("options"), list)
+            or not all(isinstance(url, str) for url in response["options"])):
+        raise RuntimeError("PyAppify returned an invalid pip-index response")
+    return response
+
+
+def get_pip_index_config(timeout=10, exit_event=None):
+    """Return the selected pip index, default and available options.
+
+    An empty index means pip's system default. Unsupported launchers raise
+    RuntimeError immediately; launcher errors and cancellation propagate.
+    """
+    if _is_python_test():
+        _process._raise_if_exit_requested(exit_event)
+        return pip_index.config(_test_pip_index_url)
+    if uses_launcher():
+        _require_pip_index_api()
+        return _validate_pip_index_response(launcher._run_launcher_api(
+            ["--get-pip-index-url"], timeout=timeout, exit_event=exit_event
+        ))
+    _process._raise_if_exit_requested(exit_event)
+    return pip_index.config(pip_index.read_url())
+
+
+def set_pip_index_url(url, timeout=10, exit_event=None):
+    """Choose an index for future dependency installs; empty uses pip defaults.
+
+    Unsupported launchers raise RuntimeError without starting a request.
+    """
+    global _test_pip_index_url
+    if not isinstance(url, str):
+        raise TypeError("url must be a string")
+    if not _is_python_test() and uses_launcher():
+        _require_pip_index_api()
+        return _validate_pip_index_response(launcher._run_launcher_api(
+            ["--set-pip-index-url", url or "default"],
+            timeout=timeout, exit_event=exit_event
+        ))
+    if url not in PIP_INDEX_URLS:
+        raise ValueError("Unsupported pip index URL: {}".format(url))
+    _process._raise_if_exit_requested(exit_event)
+    if _is_python_test():
+        _test_pip_index_url = url
+    else:
+        pip_index.write_url(url)
+    return pip_index.config(url)

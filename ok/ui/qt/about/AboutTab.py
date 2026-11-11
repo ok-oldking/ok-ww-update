@@ -11,7 +11,7 @@ from ok.ui.qt.kit.labels import Label
 from ok.ui.qt.kit.layout import FlowLayout
 from ok.ui.qt.kit.theme import theme
 from ok.ui.qt.util.app import get_localized_app_config
-from ok.ui.qt.util.pyappify_startup import get_startup_version_change
+from ok.ui.qt.util.pyappify_startup import display_version, get_startup_version_change
 from ok.util.file import get_path_relative_to_exe
 from ok.util.logger import Logger
 
@@ -118,7 +118,7 @@ class AboutTab(QWidget):
         outer.setContentsMargins(0, 0, 0, 0)
         outer.addWidget(scroll)
 
-        self.version_card = self._build_header(config)
+        self.version_card = self._build_header(config, pyappify_module)
         self.vBoxLayout.addWidget(self.version_card)
 
         self.update_card = None
@@ -170,7 +170,7 @@ class AboutTab(QWidget):
         self.vBoxLayout.addWidget(section)
         return section
 
-    def _build_header(self, config):
+    def _build_header(self, config, pyappify_module):
         header = Card()
         icon_label = QLabel(header)
         icon_label.setFixedSize(56, 56)
@@ -180,11 +180,12 @@ class AboutTab(QWidget):
         title = Label(config.get('gui_title') or "", "title", header)
         from PySide6.QtCore import QCoreApplication
         build = QCoreApplication.translate("VersionCard", 'Debug' if config.get('debug') else 'Release')
-        version = Label(f"{config.get('version') or ''} · {build}", "secondary", header)
+        version = display_version(config.get('version'), pyappify_module)
+        self.version_label = Label(f"{version} · {build}", "secondary", header)
         text = QVBoxLayout()
         text.setSpacing(4)
         text.addWidget(title)
-        text.addWidget(version)
+        text.addWidget(self.version_label)
 
         links = QWidget(header)
         flow = FlowLayout(links, spacing=8)

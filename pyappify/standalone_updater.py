@@ -12,7 +12,8 @@ layout first (see :mod:`pyappify.standalone`). Steps:
 
 1. wait for the app to exit, stopping it after a grace period (as the launcher
    stops the app before updating);
-2. check out the version tag (detached HEAD) and update submodules;
+2. check out the version (a tag or pull request leaves HEAD detached, a branch
+   becomes the checked-out branch) and update submodules;
 3. ``pip install`` the profile's requirements if they changed;
 4. on failure, check out the previous commit again;
 5. restart the app, with ``PYAPPIFY_APP_VERSION``, ``PYAPPIFY_APP_STARTING_VERSION``
@@ -31,7 +32,7 @@ import subprocess
 import sys
 import time
 
-from . import _process, shortcut, standalone
+from . import _process, shortcut, standalone, pip_index
 
 SUCCESS_CLOSE_DELAY_SECONDS = 3
 APP_STOP_TIMEOUT_SECONDS = 15
@@ -86,19 +87,36 @@ def run_job(job, log):
         apply_version(repo_path, version, job.get("profile"), log)
     except Exception as error:
         log.error("Update to %s failed: %s", version, error)
-        if rollback(repo_path, previous_commit, log):
+        if rollback(repo_path, previous_commit, log, job.get("previous_ref")):
             relaunch(job, {}, log)
         return False
 
-    update_note = job.get("update_note") or []
-    relaunch(job, {
-        "PYAPPIFY_APP_VERSION": version,
-        "PYAPPIFY_APP_STARTING_VERSION": job.get("previous_version") or version,
-        "PYAPPIFY_UPDATE_NOTE": json.dumps(update_note, ensure_ascii=False) if update_note else "",
-    }, log)
+    relaunch(job, version_environment(job), log)
     refresh_shortcuts(job, log)
     log.info("Updated to %s.", version)
     return True
+
+
+def version_environment(job):
+    """The app version variables for the restarted app; None removes one.
+
+    Only a version tag is an app version. On a branch or pull request the app
+    detects its version itself, as on any other start from that checkout.
+    """
+    version = job["version"]
+    managed = standalone.is_launcher_layout(job["repo_path"])
+    if not managed and standalone.version_kind(version) != standalone.KIND_TAG:
+        return {
+            "PYAPPIFY_APP_VERSION": None,
+            "PYAPPIFY_APP_STARTING_VERSION": None,
+            "PYAPPIFY_UPDATE_NOTE": None,
+        }
+    update_note = job.get("update_note") or []
+    return {
+        "PYAPPIFY_APP_VERSION": version,
+        "PYAPPIFY_APP_STARTING_VERSION": job.get("previous_version") or version,
+        "PYAPPIFY_UPDATE_NOTE": json.dumps(update_note, ensure_ascii=False) if update_note else "",
+    }
 
 
 def refresh_shortcuts(job, log):
@@ -109,8 +127,7 @@ def refresh_shortcuts(job, log):
         return []
     try:
         paths = shortcut.refresh_shortcuts(
-            target=argv[0],
-            arguments=argv[1:],
+            command=argv,
             working_dir=relaunch_info.get("cwd") or standalone.app_files_dir(job["repo_path"]),
             profile=job.get("profile") or "",
         )
@@ -155,11 +172,14 @@ def apply_version(repo_path, version, profile, log):
                 "tracked files have local changes; commit or stash them first"
             )
         old_commit = repo.head()
-        target_commit = standalone.tag_commit(repo, version)
+        _kind, target_commit, branch = standalone.resolve_version(repo, version, tags_only=managed)
         old_spec, _old_args, old_content = standalone.requirements_at(repo, old_commit, profile)
 
         log.info("Checking out %s (%s)...", version, target_commit.decode("ascii")[:12])
         _checkout(repo, target_commit, log, force=managed)
+        if branch:
+            standalone.attach_branch(repo, branch, target_commit)
+            log.info("On branch %s.", branch)
 
         new_spec, new_args, new_content = standalone.requirements_at(repo, target_commit, profile)
 
@@ -177,16 +197,16 @@ def apply_version(repo_path, version, profile, log):
         log.info("Requirements are up to date. Skipping dependency sync.")
 
 
-def rollback(repo_path, previous_commit, log):
+def rollback(repo_path, previous_commit, log, previous_ref=None):
+    """Check out ``previous_commit`` again, on the branch ``previous_ref`` if any."""
     log.info("Rolling back to %s...", previous_commit[:12])
     try:
         with standalone.open_repo(repo_path) as repo:
-            _checkout(
-                repo,
-                previous_commit.encode("ascii"),
-                log,
-                force=standalone.is_launcher_layout(repo_path),
-            )
+            commit = previous_commit.encode("ascii")
+            _checkout(repo, commit, log, force=standalone.is_launcher_layout(repo_path))
+            prefix = standalone.BRANCH_PREFIX.decode("ascii")
+            if previous_ref and previous_ref.startswith(prefix):
+                standalone.attach_branch(repo, previous_ref[len(prefix):], commit)
     except Exception as error:
         log.error("Rollback failed: %s", error)
         return False
@@ -205,7 +225,16 @@ def _checkout(repo, commit_id, log, force=False):
 
 def pip_install(repo_path, spec, pip_args, log):
     command = [sys.executable, "-m", "pip", "install", "--no-warn-script-location"]
-    command.extend(pip_args.split())
+    args = pip_args.split()
+    command.extend(args)
+    explicit_index = any(
+        arg in ("--index-url", "-i") or arg.startswith("--index-url=")
+        or (arg.startswith("-i") and len(arg) > 2) for arg in args
+    )
+    if not explicit_index:
+        url = pip_index.read_url(repo_path, log=log)
+        if url:
+            command.extend(["--index-url", url])
     if spec.endswith(".txt"):
         requirements_path = os.path.join(repo_path, spec)
         if not os.path.isfile(requirements_path):
@@ -249,7 +278,11 @@ def relaunch(job, env_updates, log):
         env.pop("PYTHONPATH", None)
     else:
         env["PYTHONPATH"] = pythonpath
-    env.update(env_updates)
+    for name, value in env_updates.items():
+        if value is None:
+            env.pop(name, None)
+        else:
+            env[name] = value
 
     kwargs = {"cwd": relaunch_info.get("cwd") or None, "env": env, "close_fds": True}
     if os.name == "nt":

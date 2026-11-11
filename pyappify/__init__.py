@@ -35,9 +35,11 @@ from .launcher import (
 )
 from .self_upgrade import upgrade
 from .shortcut import create_shortcut, refresh_shortcuts
-from .updates import get_version_list, get_versions, update_to_version
+from .updates import PIP_INDEX_URLS, get_pip_index_config, set_pip_index_url
+from .updates import get_version_list, get_versions, is_local_checkout, update_to_version
 from .versions import calculate_update_notes, is_greater_version
 
+app_ref = None
 app_version = os.environ.get("PYAPPIFY_APP_VERSION")
 app_starting_version = os.environ.get("PYAPPIFY_APP_STARTING_VERSION") or app_version
 update_note = os.environ.get("PYAPPIFY_UPDATE_NOTE")
@@ -58,9 +60,9 @@ pyappify_executable = find_pyappify_executable()
 
 if app_version is None and not pyappify_version and not pyappify_executable:
     # Running from a git clone without the launcher: use the version tag at HEAD.
-    from .standalone import detect_app_version
+    from .standalone import detect_app_checkout
 
-    app_version = detect_app_version()
+    app_version, app_ref = detect_app_checkout()
     app_starting_version = app_starting_version or app_version
 
 

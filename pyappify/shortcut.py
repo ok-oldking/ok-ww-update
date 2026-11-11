@@ -59,18 +59,25 @@ def create_shortcut(
     desktop=True,
     directories=None,
     profile=None,
+    command=None,
 ):
     """Create or update Windows shortcuts that start the app.
 
     Every argument defaults to the running app, using ``pyappify.yml`` in
     ``working_dir`` (and its ``profile``, by default the app's current one)
-    when it exists:
+    when it exists, also in a development checkout:
 
     - ``name``: the shortcut's file and display name; the yml ``name``, else
       the working directory's folder name.
-    - ``target`` and ``arguments``: the current command line (the running
-      Python executable and its original arguments). ``arguments`` may be a
-      string or a list.
+    - ``target`` and ``arguments``: built like the launcher's shortcut from
+      the profile's ``main_script``: a ``.py`` script runs with the app's
+      Python (``pythonw.exe`` when ``use_pythonw`` is true, else
+      ``python.exe``) and anything else runs directly. Without a
+      ``main_script`` the running command line is used, with ``python.exe``
+      replaced by the ``pythonw.exe`` next to it so no console window opens.
+      ``command`` (an argv list, the running command line by default) gives
+      that fallback and the Python that runs the script. ``arguments`` may be
+      a string or a list. An explicit ``target`` is used as given.
     - ``working_dir``: the current directory.
     - ``icon``: an .ico path; defaults to the yml ``icon`` (or the same path
       with an .ico extension), else the target's own icon.
@@ -84,13 +91,15 @@ def create_shortcut(
     """
     if os.name != "nt":
         raise OSError("Shortcuts can only be created on Windows")
-    settings = _shortcut_settings(name, target, arguments, working_dir, icon, run_as_admin, profile)
+    settings = _shortcut_settings(
+        name, target, arguments, working_dir, icon, run_as_admin, profile, command
+    )
     if directories is None:
         directories = _default_directories(start_menu, desktop)
     return _write_all(directories, settings)
 
 
-def refresh_shortcuts(target=None, arguments=None, working_dir=None, profile=None):
+def refresh_shortcuts(target=None, arguments=None, working_dir=None, profile=None, command=None):
     """Refresh the app's shortcuts the way the launcher does after starting it.
 
     The Start Menu shortcut is always written; the Desktop one is only updated
@@ -100,7 +109,9 @@ def refresh_shortcuts(target=None, arguments=None, working_dir=None, profile=Non
     """
     if os.name != "nt":
         return []
-    settings = _shortcut_settings(None, target, arguments, working_dir, None, None, profile)
+    settings = _shortcut_settings(
+        None, target, arguments, working_dir, None, None, profile, command
+    )
     directories = [_known_folder(_CSIDL_PROGRAMS)]
     desktop = _known_folder(_CSIDL_DESKTOPDIRECTORY)
     if os.path.isfile(os.path.join(desktop, settings["name"] + ".lnk")):
@@ -108,7 +119,7 @@ def refresh_shortcuts(target=None, arguments=None, working_dir=None, profile=Non
     return _write_all(directories, settings)
 
 
-def _shortcut_settings(name, target, arguments, working_dir, icon, run_as_admin, profile):
+def _shortcut_settings(name, target, arguments, working_dir, icon, run_as_admin, profile, command=None):
     working_dir = os.path.abspath(working_dir or os.getcwd())
     config = _read_app_config(working_dir)
     profile = standalone.select_profile(
@@ -116,10 +127,11 @@ def _shortcut_settings(name, target, arguments, working_dir, icon, run_as_admin,
     )
 
     if target is None:
-        command = standalone._relaunch_argv()
-        target = command[0]
+        target, default_arguments = _app_command(
+            working_dir, profile, list(command or standalone._relaunch_argv())
+        )
         if arguments is None:
-            arguments = command[1:]
+            arguments = default_arguments
     if not isinstance(arguments, str):
         arguments = subprocess.list2cmdline(list(arguments or []))
     name = _safe_file_name(
@@ -156,6 +168,45 @@ def _write_all(directories, settings):
         if changed:
             written.append(shortcut_path)
     return written
+
+
+def windowless_python(executable):
+    """``pythonw.exe`` next to a ``python.exe``, so a shortcut opens no console window.
+
+    Other executables (and a python.exe without a pythonw.exe beside it) are
+    returned unchanged.
+    """
+    directory, name = os.path.split(executable)
+    if name.lower() == "python.exe":
+        candidate = os.path.join(directory, "pythonw.exe")
+        if os.path.isfile(candidate):
+            return candidate
+    return executable
+
+
+def _app_command(working_dir, profile, command):
+    """Return ``(target, arguments)`` that start the app, as the launcher's shortcut does."""
+    main_script = str(profile.get("main_script") or "").strip()
+    if not main_script:
+        return windowless_python(command[0]), command[1:]
+    python_dir = os.path.dirname(os.path.abspath(command[0]))
+    script = _find_script(main_script, working_dir, python_dir)
+    if not main_script.lower().endswith(".py"):
+        return script, []
+    python_name = "pythonw.exe" if _is_truthy(profile.get("use_pythonw")) else "python.exe"
+    python = os.path.join(python_dir, python_name)
+    if not os.path.isfile(python):
+        python = command[0]
+    return python, [script]
+
+
+def _find_script(main_script, working_dir, python_dir):
+    """Find ``main_script`` in the working dir, else next to Python (like the launcher)."""
+    for directory in (working_dir, python_dir, os.path.join(python_dir, "Scripts")):
+        candidate = os.path.join(directory, main_script)
+        if os.path.isfile(candidate):
+            return os.path.abspath(candidate)
+    return os.path.abspath(os.path.join(working_dir, main_script))
 
 
 def _read_app_config(working_dir):
