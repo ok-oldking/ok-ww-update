@@ -92,8 +92,29 @@ def is_supported_pyappify_version(version):
     return tuple(int(part) for part in parts) >= (1, 2, 2)
 
 
-def calculate_update_notes(update_notes, current_version, target_version):
-    """Return descending notes without including versions newer than the target."""
+def entry_notes(entry, language=None):
+    """A version entry's notes in ``language``, a locale such as ``zh_CN`` or ``ja``.
+
+    Its ``localized_notes`` (present when the notes come from the app's
+    changelogs) in ``language``, else its ``update_note``.
+    """
+    if language:
+        from .i18n import language_from_locale
+
+        language = language_from_locale(language)
+    localized = entry.get("localized_notes") if language else None
+    if isinstance(localized, dict) and isinstance(localized.get(language), list):
+        return localized[language]
+    raw_notes = entry.get("update_note") or []
+    return raw_notes if isinstance(raw_notes, list) else [raw_notes]
+
+
+def calculate_update_notes(update_notes, current_version, target_version, language=None):
+    """Return descending notes without including versions newer than the target.
+
+    With ``language`` (such as ``"zh-CN"``), versions whose notes come from the
+    app's changelogs show them in that language; see :func:`entry_notes`.
+    """
     if not isinstance(update_notes, list):
         raise TypeError("update_notes must be a list")
 
@@ -127,6 +148,5 @@ def calculate_update_notes(update_notes, current_version, target_version):
 
     notes = []
     for item in selected_versions:
-        raw_notes = item.get("update_note") or []
-        notes.extend(raw_notes if isinstance(raw_notes, list) else [raw_notes])
+        notes.extend(entry_notes(item, language))
     return [str(note) for note in notes]

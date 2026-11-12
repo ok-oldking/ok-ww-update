@@ -37,7 +37,8 @@ from .self_upgrade import upgrade
 from .shortcut import create_shortcut, refresh_shortcuts
 from .updates import PIP_INDEX_URLS, get_pip_index_config, set_pip_index_url
 from .updates import get_version_list, get_versions, is_local_checkout, update_to_version
-from .versions import calculate_update_notes, is_greater_version
+from .updater_ui import can_show_window as can_show_updater, open_updater
+from .versions import calculate_update_notes, entry_notes, is_greater_version
 
 app_ref = None
 app_version = os.environ.get("PYAPPIFY_APP_VERSION")

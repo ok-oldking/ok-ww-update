@@ -22,7 +22,8 @@ layout first (see :mod:`pyappify.standalone`). Steps:
    exists), as the launcher does.
 
 On success the window closes after a few seconds; on failure it stays open
-until the user presses Enter.
+until the user presses Enter. :mod:`pyappify.updater_ui` runs the same steps
+in a progress window, through the ``progress`` callback of :func:`run_job`.
 """
 import json
 import logging
@@ -36,6 +37,24 @@ from . import _process, shortcut, standalone, pip_index
 
 SUCCESS_CLOSE_DELAY_SECONDS = 3
 APP_STOP_TIMEOUT_SECONDS = 15
+
+# Steps of an update, reported to ``progress(step, status, detail)``.
+STEP_STOP = "stop"
+STEP_CHECKOUT = "checkout"
+STEP_DEPENDENCIES = "dependencies"
+STEP_RESTART = "restart"
+STEP_ROLLBACK = "rollback"
+STEPS = (STEP_STOP, STEP_CHECKOUT, STEP_DEPENDENCIES, STEP_RESTART)
+STATUS_ACTIVE = "active"
+STATUS_DONE = "done"
+STATUS_SKIPPED = "skipped"
+STATUS_FAILED = "failed"
+# pip output lines worth showing as the dependency step's detail.
+PIP_PROGRESS_PREFIXES = ("Collecting ", "Downloading ", "Installing ", "Building ", "Successfully ")
+
+
+def _no_progress(step, status, detail=None):
+    pass
 
 
 def main(argv=None):
@@ -65,34 +84,50 @@ def main(argv=None):
     return 1
 
 
-def run_job(job, log):
-    """Apply the update described by ``job``; return whether it succeeded."""
+def run_job(job, log, progress=None):
+    """Apply the update described by ``job``; return whether it succeeded.
+
+    ``progress(step, status, detail=None)`` is called as each of ``STEPS``
+    (and ``STEP_ROLLBACK`` on failure) starts and ends.
+    """
+    progress = progress or _no_progress
     repo_path = job["repo_path"]
     version = job["version"]
     previous_commit = job["previous_commit"]
     log.info("Updating %s", repo_path)
     log.info("From %s to %s", job.get("previous_version") or previous_commit[:12], version)
 
+    progress(STEP_STOP, STATUS_ACTIVE, "Waiting for the app to close")
     if not stop_app(job.get("pid"), job.get("exit_timeout", standalone.APP_EXIT_TIMEOUT_SECONDS), log):
+        progress(STEP_STOP, STATUS_FAILED, "The app did not exit")
         return False
+    progress(STEP_STOP, STATUS_DONE)
 
+    progress(STEP_CHECKOUT, STATUS_ACTIVE, "Checking out {}".format(version))
     if standalone.is_launcher_layout(repo_path) and not standalone.is_bare_repo(repo_path):
         try:
             standalone.migrate_to_bare_layout(repo_path, log)
         except Exception as error:
             log.error("Could not convert %s to the shared-checkout layout: %s", repo_path, error)
+            progress(STEP_CHECKOUT, STATUS_FAILED, str(error))
             return False
 
     try:
-        apply_version(repo_path, version, job.get("profile"), log)
+        apply_version(repo_path, version, job.get("profile"), log, progress)
     except Exception as error:
         log.error("Update to %s failed: %s", version, error)
+        progress(STEP_ROLLBACK, STATUS_ACTIVE, "Restoring {}".format(previous_commit[:12]))
         if rollback(repo_path, previous_commit, log, job.get("previous_ref")):
+            progress(STEP_ROLLBACK, STATUS_DONE)
             relaunch(job, {}, log)
+        else:
+            progress(STEP_ROLLBACK, STATUS_FAILED)
         return False
 
-    relaunch(job, version_environment(job), log)
+    progress(STEP_RESTART, STATUS_ACTIVE, "Starting the app")
+    process = relaunch(job, version_environment(job), log)
     refresh_shortcuts(job, log)
+    progress(STEP_RESTART, STATUS_DONE if process else STATUS_SKIPPED)
     log.info("Updated to %s.", version)
     return True
 
@@ -159,12 +194,22 @@ def stop_app(pid, grace_seconds, log):
     return False
 
 
-def apply_version(repo_path, version, profile, log):
+def apply_version(repo_path, version, profile, log, progress=None):
     """Check out ``version``, update submodules and sync requirements if needed.
 
     In the launcher's layout tracked files are forced to the new version, as
     the launcher does; a plain clone with local changes is not touched.
     """
+    progress = progress or _no_progress
+    current_step = [STEP_CHECKOUT]
+    try:
+        _apply_version(repo_path, version, profile, log, progress, current_step)
+    except Exception as error:
+        progress(current_step[0], STATUS_FAILED, str(error))
+        raise
+
+
+def _apply_version(repo_path, version, profile, log, progress, current_step):
     managed = standalone.is_launcher_layout(repo_path)
     with standalone.open_repo(repo_path) as repo:
         if not managed and standalone.has_local_changes(repo):
@@ -183,18 +228,31 @@ def apply_version(repo_path, version, profile, log):
 
         new_spec, new_args, new_content = standalone.requirements_at(repo, target_commit, profile)
 
+    progress(STEP_CHECKOUT, STATUS_DONE)
+    current_step[0] = STEP_DEPENDENCIES
     files_dir = standalone.app_files_dir(repo_path)
+
+    def install():
+        progress(STEP_DEPENDENCIES, STATUS_ACTIVE, "Running pip install")
+        pip_install(
+            files_dir, new_spec, new_args, log,
+            on_line=lambda line: progress(STEP_DEPENDENCIES, STATUS_ACTIVE, line),
+        )
+        progress(STEP_DEPENDENCIES, STATUS_DONE)
+
     if not new_spec:
         log.info("No requirements configured. Skipping dependency sync.")
+        progress(STEP_DEPENDENCIES, STATUS_SKIPPED, "No requirements configured")
     elif old_spec != new_spec:
         log.info("Requirements changed from '%s' to '%s'. Syncing dependencies.", old_spec, new_spec)
-        pip_install(files_dir, new_spec, new_args, log)
+        install()
     elif old_content != new_content:
         changed_file = new_spec if new_spec.endswith(".txt") else "pyproject.toml"
         log.info("%s changed. Syncing dependencies.", changed_file)
-        pip_install(files_dir, new_spec, new_args, log)
+        install()
     else:
         log.info("Requirements are up to date. Skipping dependency sync.")
+        progress(STEP_DEPENDENCIES, STATUS_SKIPPED, "Requirements are up to date")
 
 
 def rollback(repo_path, previous_commit, log, previous_ref=None):
@@ -223,7 +281,7 @@ def _checkout(repo, commit_id, log, force=False):
         porcelain.submodule_update(repo, init=True, recursive=True)
 
 
-def pip_install(repo_path, spec, pip_args, log):
+def pip_install(repo_path, spec, pip_args, log, on_line=None):
     command = [sys.executable, "-m", "pip", "install", "--no-warn-script-location"]
     args = pip_args.split()
     command.extend(args)
@@ -248,6 +306,10 @@ def pip_install(repo_path, spec, pip_args, log):
     log.info("Running: %s", subprocess.list2cmdline(command))
     env = os.environ.copy()
     env["PYTHONIOENCODING"] = "utf-8"
+    kwargs = {}
+    if os.name == "nt":
+        # The output is piped; without this a windowed updater flashes a console.
+        kwargs["creationflags"] = subprocess.CREATE_NO_WINDOW
     process = subprocess.Popen(
         command,
         cwd=repo_path,
@@ -256,9 +318,13 @@ def pip_install(repo_path, spec, pip_args, log):
         stderr=subprocess.STDOUT,
         encoding="utf-8",
         errors="replace",
+        **kwargs
     )
     for line in process.stdout:
-        log.info("  %s", line.rstrip())
+        line = line.rstrip()
+        log.info("  %s", line)
+        if on_line and line.lstrip().startswith(PIP_PROGRESS_PREFIXES):
+            on_line(line.strip())
     if process.wait() != 0:
         raise standalone.StandaloneUpdateError(
             "pip install exited with code {}".format(process.returncode)
@@ -301,15 +367,18 @@ def relaunch(job, env_updates, log):
     return process
 
 
-def _setup_logging(log_path):
+def _setup_logging(log_path, console=True):
     log = logging.getLogger("pyappify.standalone_updater")
     log.setLevel(logging.INFO)
     log.propagate = False
-    log.handlers.clear()
+    for handler in list(log.handlers):
+        log.removeHandler(handler)
+        handler.close()
 
-    console = logging.StreamHandler(sys.stdout)
-    console.setFormatter(logging.Formatter("[%(asctime)s] %(message)s", "%H:%M:%S"))
-    log.addHandler(console)
+    if console and sys.stdout is not None:
+        stream = logging.StreamHandler(sys.stdout)
+        stream.setFormatter(logging.Formatter("[%(asctime)s] %(message)s", "%H:%M:%S"))
+        log.addHandler(stream)
     try:
         os.makedirs(os.path.dirname(log_path), exist_ok=True)
         log_file = logging.FileHandler(log_path, encoding="utf-8")

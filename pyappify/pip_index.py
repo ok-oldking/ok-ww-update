@@ -45,8 +45,8 @@ def read_url(repo_path=None, log=None):
     return url
 
 
-def write_url(url):
-    path = config_path()
+def write_url(url, repo_path=None):
+    path = config_path(repo_path)
     directory = os.path.dirname(path)
     os.makedirs(directory, exist_ok=True)
     temporary = None

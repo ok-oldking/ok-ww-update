@@ -82,8 +82,13 @@ def get_versions(number_versions=10, release_only=True, timeout=120, exit_event=
     return get_version_list(number_versions, release_only, timeout, exit_event)
 
 
-def update_to_version(version, timeout=300, exit_event=None):
-    """Update the app, cancelling with InterruptedError on exit_event."""
+def update_to_version(version, timeout=300, exit_event=None, language=None):
+    """Update the app, cancelling with InterruptedError on exit_event.
+
+    ``language`` picks the language of the update notes the restarted app gets
+    when the app's changelogs have them (without the launcher; the launcher
+    uses its own language).
+    """
     if not isinstance(version, str) or not version.strip():
         raise ValueError("version must be a non-empty string")
     if _is_python_test():
@@ -97,6 +102,7 @@ def update_to_version(version, timeout=300, exit_event=None):
             exit_event=exit_event,
             app_version=state.app_version,
             app_profile=state.app_profile,
+            language=language,
         )
     response = launcher._run_launcher_api(
         ["--update-to-version", version],
