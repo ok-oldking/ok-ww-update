@@ -137,8 +137,8 @@ QAbstractSpinBox::up-button, QAbstractSpinBox::down-button {{
     subcontrol-origin: border; width: 22px; border: 0; background: transparent;
 }}
 QAbstractSpinBox::up-button:hover, QAbstractSpinBox::down-button:hover {{ background: {control_hover}; border-radius: 4px; }}
-QAbstractSpinBox::up-arrow {{ image: url({chevron_up}); width: 12px; height: 12px; }}
-QAbstractSpinBox::down-arrow {{ image: url({chevron_down}); width: 12px; height: 12px; }}
+QAbstractSpinBox::up-arrow {{ image: url("{chevron_up}"); width: 12px; height: 12px; }}
+QAbstractSpinBox::down-arrow {{ image: url("{chevron_down}"); width: 12px; height: 12px; }}
 NumberBox {{
     background: {control};
     border: 1px solid {border_strong};
@@ -150,19 +150,20 @@ NumberBox Button#numberMinus {{ border-right: 1px solid {border_strong}; border-
 NumberBox Button#numberPlus {{ border-left: 1px solid {border_strong}; border-top-right-radius: 7px; border-bottom-right-radius: 7px; }}
 
 QComboBox {{
+    combobox-popup: 0;
     background: {control};
     border: 1px solid {border_strong};
     border-radius: 8px;
-    padding: 0 30px 0 12px;
+    padding: 0 0 0 12px;
     min-height: 34px;
 }}
 QComboBox:hover {{ background: {control_hover}; }}
 QComboBox:focus, QComboBox:on {{ border-color: {accent}; }}
 QComboBox:disabled {{ color: {text_disabled}; background: transparent; border-color: {border}; }}
 QComboBox::drop-down {{ border: 0; width: 28px; subcontrol-origin: padding; subcontrol-position: center right; }}
-QComboBox::down-arrow {{ image: url({chevron_down}); width: 14px; height: 14px; }}
-QComboBox::down-arrow:disabled {{ image: url({chevron_down_disabled}); }}
-QComboBox QAbstractItemView {{
+QComboBox::down-arrow {{ image: url("{chevron_down}"); width: 14px; height: 14px; }}
+QComboBox::down-arrow:disabled {{ image: url("{chevron_down_disabled}"); }}
+QComboBox QAbstractItemView, QListView#comboPopupList {{
     background: {surface_alt};
     border: 1px solid {border_strong};
     border-radius: 8px;
@@ -172,9 +173,20 @@ QComboBox QAbstractItemView {{
     selection-color: {text};
 }}
 QComboBox QAbstractItemView::item {{ min-height: 30px; padding: 0 8px; border-radius: 6px; }}
-QComboBox QAbstractItemView::item:hover {{ background: {control_hover}; }}
+QComboBox QAbstractItemView::item:hover, QListView#comboPopupList::item:hover {{ background: {control_hover}; }}
+QListView#comboPopupList {{
+    padding: 0;
+    selection-background-color: {combo_selection};
+}}
+QListView#comboPopupList::item {{
+    min-height: 29px; margin: 2px 6px; padding: 0 10px; border-radius: 5px;
+}}
+QListView#comboPopupList::item:selected {{
+    background: {combo_selection}; color: {text};
+}}
 
 QCheckBox, QRadioButton {{ spacing: 8px; background: transparent; }}
+QCheckBox {{ padding: 1px 0; }}
 QCheckBox:disabled, QRadioButton:disabled {{ color: {text_disabled}; }}
 QCheckBox::indicator, QRadioButton::indicator {{
     width: 16px; height: 16px;
@@ -184,7 +196,7 @@ QCheckBox::indicator, QRadioButton::indicator {{
 QCheckBox::indicator {{ border-radius: 5px; }}
 QRadioButton::indicator {{ border-radius: 9px; }}
 QCheckBox::indicator:hover, QRadioButton::indicator:hover {{ border-color: {accent}; }}
-QCheckBox::indicator:checked {{ background: {accent}; border-color: {accent}; image: url({check_white}); }}
+QCheckBox::indicator:checked {{ background: {accent}; border-color: {accent}; image: url("{check_white}"); }}
 QRadioButton::indicator:checked {{ border: 5px solid {accent}; background: #FFFFFF; width: 8px; height: 8px; }}
 QCheckBox::indicator:disabled, QRadioButton::indicator:disabled {{ border-color: {border}; background: transparent; }}
 
@@ -431,6 +443,7 @@ def build_stylesheet(manager) -> str:
     success, warning, danger = (QColor(tokens[name]) for name in ("success", "warning", "danger"))
     window_bg, sidebar_bg = (manager.background(name) for name in ("window", "sidebar"))
     return _TEMPLATE.format(
+        combo_selection="rgba(255, 255, 255, 0.08)" if manager.is_dark() else "rgba(0, 0, 0, 0.04)",
         window_bg=rgba(window_bg, window_bg.alphaF()),
         sidebar_bg=rgba(sidebar_bg, sidebar_bg.alphaF()),
         # With a backdrop the content layer's own edge separates it from the frame.
