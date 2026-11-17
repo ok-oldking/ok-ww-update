@@ -8,7 +8,7 @@ from src.game_launcher import get_game_launch_arguments
 from src.task.process_feature import process_feature
 from src.task.task_icons import task_icon
 
-version = "v3.8.3"
+version = "v3.8.4"
 
 
 def _find_most_recently_run_pc_exe():
@@ -187,10 +187,9 @@ config = {
             'use_npu': True,
         }
     },
-    'plugin':True,
+    'plugin': False,
     'my_app': ['src.globals', 'Globals'],
     'start_timeout': 120,  # default 60
-    'update_only_game_exit': True,  # if startup skipped the update check, check 10s after the game exits
     'wait_until_settle_time': 0,
     # required if using feature detection
     'template_matching': {
@@ -224,6 +223,15 @@ config = {
         'check_auto_hdr': True,
         'check_night_light': True,
         'force_no_night_light': False,
+    },
+    'browser': {
+        'url': 'https://mc.kurogames.com/cloud/#/',
+        'resolution': (1920, 1080),
+        'channels': ['msedge', 'chrome', 'chromium'],
+        # Keep SDR video in the compositor; direct video overlays clip WGC colors on HDR displays.
+        'args': ['--webrtc-ip-handling-policy=default', '--force-color-profile=srgb',
+                 '--disable-direct-composition'],
+        'nick': '云游戏(需要Win11并安装Chrome或Edge)',
     },
     'window_size': {
         'width': 1200,
@@ -281,7 +289,6 @@ config = {
         ["src.task.EnhanceEchoTask", "EnhanceEchoTask"],
         ["src.task.ChangeEchoTask", "ChangeEchoTask"],
         ["src.task.GardenTask", "GardenTask"],
-        ["src.task.TacetEliminationTask", "TacetEliminationTask"],
         # ["src.task.DiagnosisTask", "DiagnosisTask"],
     ], 'trigger_tasks': [
         ["src.task.AutoCombatTask", "AutoCombatTask"],

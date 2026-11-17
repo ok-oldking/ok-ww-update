@@ -1,29 +1,67 @@
 import asyncio
+import ctypes
 import os
 import re
 import threading
+from ctypes import wintypes
 
+import win32con
 import win32gui
 
 from ok.core.events import communicate
 from ok.task.exceptions import CaptureException
 from ok.util.logger import Logger
-from ok.util.window import resize_window, windows_graphics_available, find_hwnd
+from ok.util.window import DWMWA_EXTENDED_FRAME_BOUNDS, windows_graphics_available, find_hwnd
 
 from ok.device.capture_methods.base import BaseCaptureMethod
-from ok.device.capture_methods.bitblt_utils import get_crop_point
 from ok.device.capture_methods.windows_graphics import WindowsGraphicsCaptureMethod
 
 logger = Logger.get_logger(__name__)
+
+# Pages ask for pointer lock on mouse down (e.g. cloud game SDKs). The automated browser window is
+# usually not the OS foreground window, so Chromium rejects the lock (pointerlockerror) and such pages
+# fall back to cursor mode, drop the click or send Esc. Fake a granted lock; pages still release it
+# through exitPointerLock exactly as with a real lock. Disable with browser config 'fake_pointer_lock': False.
+FAKE_POINTER_LOCK_JS = '''() => {
+  if (window.__okFakePointerLock === undefined) {
+    window.__okFakePointerLock = null;
+    Object.defineProperty(Document.prototype, 'pointerLockElement', {configurable: true,
+      get() { return window.__okFakePointerLock; }});
+    window.__okRequestPointerLock = function () {
+      if (window.__okFakePointerLock !== this) {
+        window.__okFakePointerLock = this;
+        document.dispatchEvent(new Event('pointerlockchange'));
+      }
+      return Promise.resolve();
+    };
+    Element.prototype.requestPointerLock = window.__okRequestPointerLock;
+    Document.prototype.exitPointerLock = function () {
+      if (window.__okFakePointerLock) {
+        window.__okFakePointerLock = null;
+        document.dispatchEvent(new Event('pointerlockchange'));
+      }
+    };
+  }
+  // Already loaded pages may have cached the native function on the element itself.
+  for (const el of document.querySelectorAll('video, canvas')) {
+    if (Object.prototype.hasOwnProperty.call(el, 'requestPointerLock')) {
+      el.requestPointerLock = window.__okRequestPointerLock;
+    }
+  }
+  return true;
+}'''
+
 
 class BrowserCaptureMethod(BaseCaptureMethod):
     name = "Browser Capture"
     description = "Capture from Browser using Playwright and Windows Graphics Capture"
 
-    def __init__(self, config, exit_event):
+    def __init__(self, config, exit_event, global_config=None):
         super().__init__()
         self.config = config
         self.exit_event = exit_event
+        self.global_config = global_config
+        self._audio_mute = None
         res = config.get('resolution', (1280, 720))
         self._size = (res[0], res[1])
         logger.info(f'BrowserCaptureMethod init {self._size}')
@@ -78,10 +116,11 @@ class BrowserCaptureMethod(BaseCaptureMethod):
 
 
         args.append(f"--disable-features={','.join(disable_features)}")
+        args.extend(self.config.get('args', []))
 
         user_data_dir = os.path.join('cache', 'playwright')
 
-        channels = ['msedge', 'chrome', 'chromium']
+        channels = self.config.get('channels', ['msedge', 'chrome', 'chromium'])
         for channel in channels:
             try:
                 logger.info(f'Attempting to launch persistent context with channel: {channel}')
@@ -100,6 +139,10 @@ class BrowserCaptureMethod(BaseCaptureMethod):
 
         if self.browser is None:
             raise Exception("Failed to launch system browser.")
+
+        fake_pointer_lock = self.config.get('fake_pointer_lock', True)
+        if fake_pointer_lock:
+            await self.browser.add_init_script(script=f'({FAKE_POINTER_LOCK_JS})()')
 
         await asyncio.sleep(0.1)
 
@@ -131,6 +174,10 @@ class BrowserCaptureMethod(BaseCaptureMethod):
             if url:
                 await self.page.goto(url)
 
+        if fake_pointer_lock:
+            # A reused page loaded before the init script was registered.
+            await self.page.evaluate(FAKE_POINTER_LOCK_JS)
+
         await self.page.bring_to_front()
         await self.page.set_viewport_size({'width': width, 'height': height})
 
@@ -154,33 +201,66 @@ class BrowserCaptureMethod(BaseCaptureMethod):
                     self.x_offset = res[3]
                     self.y_offset = res[4]
 
-                    real_w = res[5]
-                    real_h = res[6]
-                    if real_w > 0 and real_h > 0:
-                        if real_w != width or real_h != height:
-                            rect = win32gui.GetWindowRect(self.hwnd)
-                            w_width = rect[2] - rect[0]
-                            w_height = rect[3] - rect[1]
-                            resize_window(self.hwnd, w_width + (width - real_w), w_height + (height - real_h))
-                            await asyncio.sleep(0.5)
-                            res = find_hwnd(title_pattern, ['chrome.exe', 'msedge.exe', 'chromium.exe'], width, height)
-                            if res[1] > 0:
-                                self.hwnd = res[1]
-                                self.exe_full_path = res[2]
-                                self.x_offset = res[3]
-                                self.y_offset = res[4]
-                                real_w = res[5]
-                                real_h = res[6]
-                        self._size = (real_w, real_h)
+                    if not self.update_window_geometry():
+                        await asyncio.sleep(0.1)
+                        continue
 
                     logger.info(
                         f"Browser window '{target_title}' found: {self.hwnd} offsets: {self.x_offset},{self.y_offset} size: {self._size}")
                     self.wgc_capture = BrowserWGC(self)
+                    if getattr(self, 'global_config', None) is not None:
+                        from ok.device.browser_audio import BrowserAudioMute
+                        self._audio_mute = BrowserAudioMute(
+                            self.page,
+                            lambda: win32gui.GetForegroundWindow() == self.hwnd,
+                            lambda: self.global_config.get_config('Basic Options').get(
+                                'Mute Game while in Background'), self.exit_event)
+                        self._audio_mute.start()
                     break
             await asyncio.sleep(0.5)
 
+    def get_viewport_rect(self):
+        """Return the visible page renderer's bounds in screen coordinates."""
+        rects = []
+
+        def collect(hwnd, _):
+            if (win32gui.IsWindowVisible(hwnd)
+                    and win32gui.GetClassName(hwnd) == 'Chrome_RenderWidgetHostHWND'):
+                left, top, right, bottom = win32gui.GetClientRect(hwnd)
+                if right > left and bottom > top:
+                    x, y = win32gui.ClientToScreen(hwnd, (left, top))
+                    rects.append((x, y, x + right - left, y + bottom - top))
+            return True
+
+        win32gui.EnumChildWindows(self.hwnd, collect, None)
+        return max(rects, key=lambda r: (r[2] - r[0]) * (r[3] - r[1]), default=None)
+
+    def update_window_geometry(self):
+        viewport = self.get_viewport_rect()
+        if viewport is None:
+            return False
+        client_x, client_y = win32gui.ClientToScreen(self.hwnd, (0, 0))
+        _, _, client_w, client_h = win32gui.GetClientRect(self.hwnd)
+        self.x_offset = viewport[0] - client_x
+        self.y_offset = viewport[1] - client_y
+        width, height = self._size
+        # Playwright's fixed viewport can extend below the native window when
+        # Chromium displays an infobar. Grow the window instead of losing pixels.
+        missing_w = max(0, self.x_offset + width - client_w)
+        missing_h = max(0, self.y_offset + height - client_h)
+        if missing_w or missing_h:
+            left, top, right, bottom = win32gui.GetWindowRect(self.hwnd)
+            win32gui.SetWindowPos(self.hwnd, 0, 0, 0,
+                                 right - left + missing_w, bottom - top + missing_h,
+                                 win32con.SWP_NOMOVE | win32con.SWP_NOZORDER | win32con.SWP_NOACTIVATE)
+            return False
+        return True
+
     async def _close_async(self):
         logger.info(f'BrowserCaptureMethod _close_async')
+        if getattr(self, '_audio_mute', None) is not None:
+            await self._audio_mute.close()
+            self._audio_mute = None
         if self.page:
             try:
                 await self.page.close()
@@ -251,6 +331,8 @@ class BrowserCaptureMethod(BaseCaptureMethod):
             return None
 
         if self.wgc_capture:
+            if not self.update_window_geometry():
+                return None
             return self.wgc_capture.do_get_frame_wait(timeout)
 
         return None
@@ -302,8 +384,8 @@ class BrowserWindowAdapter:
 
     def get_abs_cords(self, x, y):
         try:
-            rect = win32gui.GetWindowRect(self.capture.hwnd)
-            return rect[0] + self.capture.x_offset + x, rect[1] + self.capture.y_offset + y
+            return win32gui.ClientToScreen(
+                self.capture.hwnd, (self.capture.x_offset + x, self.capture.y_offset + y))
         except:
             return x, y
 
@@ -325,27 +407,16 @@ class BrowserWGC(WindowsGraphicsCaptureMethod):
         if target_w <= 0 or target_h <= 0:
             return frame
 
-        x = int(getattr(self.browser_method, "x_offset", 0) or 0)
-        y = int(getattr(self.browser_method, "y_offset", 0) or 0)
-
-        if 0 <= x and 0 <= y and x + target_w <= fw and y + target_h <= fh:
-            left_extra = x
-            right_extra = fw - (x + target_w)
-            top_extra = y
-            bottom_extra = fh - (y + target_h)
-            if abs(left_extra - right_extra) <= 2 and abs(bottom_extra - left_extra) <= 2:
-                return frame[y:y + target_h, x:x + target_w]
-
-        border, title_height = get_crop_point(fw, fh, target_w, target_h)
-        border = max(0, int(border))
-        title_height = max(0, int(title_height))
-        if border == 0 and title_height == 0:
-            return frame
-
-        x1 = border
-        y1 = title_height
-        x2 = fw - border
-        y2 = fh - border
-        if x2 <= x1 or y2 <= y1:
+        # WGC excludes the invisible resize borders, whereas renderer offsets
+        # are relative to the native client area. Convert both to screen space.
+        bounds = wintypes.RECT()
+        result = ctypes.windll.dwmapi.DwmGetWindowAttribute(
+            self.browser_method.hwnd, DWMWA_EXTENDED_FRAME_BOUNDS, ctypes.byref(bounds), ctypes.sizeof(bounds))
+        if result != 0:
             return None
-        return frame[y1:y2, x1:x2]
+        screen_x, screen_y = self.hwnd_window.get_abs_cords(0, 0)
+        x = screen_x - bounds.left
+        y = screen_y - bounds.top
+        if x < 0 or y < 0 or x + target_w > fw or y + target_h > fh:
+            return None
+        return frame[y:y + target_h, x:x + target_w]
