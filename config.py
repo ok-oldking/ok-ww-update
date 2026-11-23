@@ -8,7 +8,7 @@ from src.game_launcher import get_game_launch_arguments
 from src.task.process_feature import process_feature
 from src.task.task_icons import task_icon
 
-version = "v3.8.13"
+version = "v3.8.14"
 
 
 def _find_most_recently_run_pc_exe():
@@ -228,6 +228,7 @@ config = {
         'url': 'https://mc.kurogames.com/cloud/#/',
         'resolution': (1920, 1080),
         'channels': ['msedge', 'chrome', 'chromium'],
+        'capture': 'webrtc',
         # Keep SDR video in the compositor; direct video overlays clip WGC colors on HDR displays.
         'args': ['--webrtc-ip-handling-policy=default', '--force-color-profile=srgb',
                  '--disable-direct-composition'],
