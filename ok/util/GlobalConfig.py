@@ -19,6 +19,15 @@ CREATE_START_MENU_SHORTCUT = 'Create Start Menu Shortcut'
 CREATE_DESKTOP_SHORTCUT = 'Create Desktop Shortcut'
 NOTIFICATION_OPTION_NAME = 'Notification'
 SYSTEM_NOTIFICATION_ENABLED = 'System Notification'
+BARK_NOTIFICATION_ENABLED = 'Bark Notification'
+BARK_SERVER_URL = 'Bark Server URL'
+BARK_DEVICE_KEY = 'Bark Device Key'
+BARK_GROUP = 'Bark Group'
+BARK_ICON = 'Bark Icon'
+BARK_SOUND = 'Bark Sound'
+BARK_LEVEL = 'Bark Level'
+BARK_URL = 'Bark URL'
+BARK_ARCHIVE = 'Bark Archive'
 DISCORD_NOTIFICATION_ENABLED = 'Discord Notification'
 DISCORD_WEBHOOK = 'Discord Webhook'
 QQ_NOTIFICATION_ENABLED = 'QQ Desktop Notification (Not Reliable)'
@@ -34,6 +43,9 @@ QQ_BOT_NOTIFICATION_ENABLED = 'QQ Bot API Notification'
 QQ_BOT_APP_ID = 'QQ Bot API App ID'
 QQ_BOT_TOKEN = 'QQ Bot API Token'
 QQ_BOT_CHANNEL_ID = 'QQ Bot API Channel ID'
+PUSHPLUS_NOTIFICATION_ENABLED = 'PushPlus Notification'
+PUSHPLUS_TOKEN = 'PushPlus Token'
+PUSHPLUS_TOPIC = 'PushPlus Topic'
 SMTP_NOTIFICATION_ENABLED = 'SMTP Notification'
 SMTP_HOST = 'SMTP Host'
 SMTP_PORT = 'SMTP Port'
@@ -168,6 +180,15 @@ basic_options = create_basic_options()
 def create_notification_options():
     default = {
         SYSTEM_NOTIFICATION_ENABLED: True,
+        BARK_NOTIFICATION_ENABLED: False,
+        BARK_SERVER_URL: 'https://api.day.app',
+        BARK_DEVICE_KEY: '',
+        BARK_GROUP: '',
+        BARK_ICON: '',
+        BARK_SOUND: '',
+        BARK_LEVEL: 'active',
+        BARK_URL: '',
+        BARK_ARCHIVE: 'App Default',
         DISCORD_NOTIFICATION_ENABLED: False,
         DISCORD_WEBHOOK: '',
         TELEGRAM_NOTIFICATION_ENABLED: False,
@@ -179,6 +200,9 @@ def create_notification_options():
         QQ_BOT_APP_ID: '',
         QQ_BOT_TOKEN: '',
         QQ_BOT_CHANNEL_ID: '',
+        PUSHPLUS_NOTIFICATION_ENABLED: False,
+        PUSHPLUS_TOKEN: '',
+        PUSHPLUS_TOPIC: '',
         SMTP_NOTIFICATION_ENABLED: False,
         SMTP_HOST: '',
         SMTP_PORT: 587,
@@ -194,6 +218,17 @@ def create_notification_options():
         WECHAT_NICKNAME: '',
     }
     config_type = {
+        BARK_NOTIFICATION_ENABLED: {
+            'sub_configs': {True: [BARK_SERVER_URL, BARK_DEVICE_KEY, BARK_GROUP,
+                                   BARK_ICON, BARK_SOUND, BARK_LEVEL, BARK_URL, BARK_ARCHIVE]}},
+        BARK_SERVER_URL: {'type': 'line_edit', 'minimum_width': 480, 'maximum_width': 640},
+        BARK_DEVICE_KEY: {'type': 'line_edit'},
+        BARK_GROUP: {'type': 'line_edit'},
+        BARK_ICON: {'type': 'line_edit', 'minimum_width': 480, 'maximum_width': 640},
+        BARK_SOUND: {'type': 'line_edit'},
+        BARK_LEVEL: {'type': 'drop_down', 'options': ['active', 'passive', 'timeSensitive', 'critical']},
+        BARK_URL: {'type': 'line_edit', 'minimum_width': 480, 'maximum_width': 640},
+        BARK_ARCHIVE: {'type': 'drop_down', 'options': ['App Default', 'Save', 'Do Not Save']},
         DISCORD_NOTIFICATION_ENABLED: {'sub_configs': {True: [DISCORD_WEBHOOK]}},
         DISCORD_WEBHOOK: {
             'type': 'line_edit', 'minimum_width': 480, 'maximum_width': 640},
@@ -204,6 +239,10 @@ def create_notification_options():
         WECOM_NOTIFICATION_ENABLED: {'sub_configs': {True: [WECOM_WEBHOOK]}},
         QQ_BOT_NOTIFICATION_ENABLED: {
             'sub_configs': {True: [QQ_BOT_APP_ID, QQ_BOT_TOKEN, QQ_BOT_CHANNEL_ID]}},
+        PUSHPLUS_NOTIFICATION_ENABLED: {
+            'sub_configs': {True: [PUSHPLUS_TOKEN, PUSHPLUS_TOPIC]}},
+        PUSHPLUS_TOKEN: {'type': 'line_edit'},
+        PUSHPLUS_TOPIC: {'type': 'line_edit'},
         TELEGRAM_BOT_TOKEN: {'type': 'line_edit'},
         TELEGRAM_CHAT_ID: {'type': 'line_edit'},
         WECOM_WEBHOOK: {'type': 'line_edit', 'minimum_width': 480, 'maximum_width': 640},
@@ -220,6 +259,19 @@ def create_notification_options():
         SMTP_DEFAULT_RECIPIENT: {'type': 'line_edit'},
     }
     descriptions = {
+        BARK_NOTIFICATION_ENABLED: 'Send notifications through the Bark iOS app',
+        BARK_SERVER_URL: 'Bark server URL; do not change unless needed',
+        BARK_DEVICE_KEY: 'Device key registered in the Bark app',
+        BARK_GROUP: 'Notification group; leave empty to send without a group',
+        BARK_ICON: 'Notification icon URL; leave empty to use the app default icon',
+        BARK_SOUND: 'Ringtone name; leave empty to use the app default',
+        BARK_LEVEL: (
+            'Normal: display immediately and wake the screen\n'
+            'Passive: notification list only\n'
+            'Time Sensitive: show during Focus\n'
+            'Critical: sound even in silent mode'),
+        BARK_URL: 'Link to open when the notification is tapped',
+        BARK_ARCHIVE: 'Whether to save notifications in Bark history',
         SYSTEM_NOTIFICATION_ENABLED: 'Show notifications using the Windows system tray',
         DISCORD_NOTIFICATION_ENABLED: 'Send notifications to a Discord webhook',
         DISCORD_WEBHOOK: 'Discord channel webhook URL',
@@ -238,6 +290,9 @@ def create_notification_options():
         QQ_BOT_APP_ID: 'QQ Bot application ID',
         QQ_BOT_TOKEN: 'QQ Bot application token',
         QQ_BOT_CHANNEL_ID: 'QQ channel ID to receive notifications',
+        PUSHPLUS_NOTIFICATION_ENABLED: 'Send notifications through PushPlus (pushplus.plus)',
+        PUSHPLUS_TOKEN: 'User or message token from pushplus.plus',
+        PUSHPLUS_TOPIC: 'Optional group code; leave empty to send only to yourself',
         SMTP_NOTIFICATION_ENABLED: 'Send notifications through an SMTP email server',
         SMTP_HOST: 'SMTP server address (e.g. smtp.qq.com)',
         SMTP_PORT: 'SMTP server port (587 or 465)',
