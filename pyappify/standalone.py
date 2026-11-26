@@ -2,7 +2,8 @@
 
 Used when no launcher executable was found and ``PYAPPIFY_VERSION`` is not
 set. Versions are the checkout's version tags, the same ones the launcher
-uses. Git access goes through Dulwich, so git itself does not need to be
+uses (see :mod:`pyappify.versions`); without any, the most recent commits of
+the default branch, named by short hash (``KIND_COMMIT``). Git access goes through Dulwich, so git itself does not need to be
 installed (``pip install "pyappify[standalone]"``).
 
 Two layouts are supported:
@@ -39,7 +40,15 @@ from contextlib import contextmanager
 
 from . import _process, changelog, i18n
 from ._state import get_logger
-from .versions import is_release_version, is_version_tag, select_kept_tags, sort_version_tags
+from .versions import (
+    COMMIT_VERSION_LENGTH,
+    RECENT_COMMIT_VERSIONS,
+    is_commit_version,
+    is_release_version,
+    is_version_tag,
+    select_kept_tags,
+    sort_version_tags,
+)
 
 REMOTE_NAME = b"origin"
 TAG_PREFIX = b"refs/tags/"
@@ -52,12 +61,17 @@ REMOTE_HEAD_REF = REMOTE_BRANCH_PREFIX + HEAD_REF
 # refs/pyappify/pull/<n> so they never mix with the user's own refs.
 REMOTE_PULL_REF = b"refs/pull/%d/head"
 LOCAL_PULL_PREFIX = b"refs/pyappify/pull/"
+# The remote's default branch as the launcher fetches it, for commit versions.
+LAUNCHER_DEFAULT_BRANCH_REF = b"refs/pyappify/default-branch"
 
 # What a version of a plain git clone can be, besides a version tag.
 KIND_BRANCH = "branch"  # the remote's default branch; the version is its name
 KIND_LOCAL = "local"    # a local branch; the version is "local/<branch>"
 KIND_PULL = "pr"        # an open pull request; the version is "pr/<number>"
 KIND_TAG = "tag"
+# Without version tags the versions are the recent commits of the default branch,
+# named by their short hash, as in the launcher.
+KIND_COMMIT = "commit"
 LOCAL_VERSION_PREFIX = "local/"
 PULL_VERSION_PREFIX = "pr/"
 MAX_LOCAL_BRANCHES = 10
@@ -385,7 +399,11 @@ def _peel_to_commit(repo, sha):
 
 
 def head_version(repo):
-    """Return the newest version tag at HEAD, or None."""
+    """Return the newest version tag at HEAD, or None.
+
+    In a repository without version tags the versions are commits, and this is
+    HEAD's commit version (its short hash).
+    """
     try:
         head = repo.head()
     except KeyError:
@@ -395,10 +413,13 @@ def head_version(repo):
     except Exception:
         targets = None
     if targets is None:
-        for tag in local_version_tags(repo):
+        tags = local_version_tags(repo)
+        for tag in tags:
             if tag_commit(repo, tag) == head:
                 return tag
-        return None
+        return None if tags else commit_version_name(head)
+    if not sort_version_tags(targets):
+        return commit_version_name(head)
     for tag in sort_version_tags(targets):
         sha, peeled = targets[tag]
         if peeled is None:
@@ -539,14 +560,61 @@ def branch_target(repo, name):
     )
 
 
+def commit_version_name(commit):
+    """The version name of a commit id (bytes or str): its short hash."""
+    if isinstance(commit, bytes):
+        commit = commit.decode("ascii")
+    return commit[:COMMIT_VERSION_LENGTH]
+
+
+def resolve_commit(repo, version):
+    """Return the full commit id for a commit version (a short or full hash)."""
+    from dulwich.objectspec import parse_commit
+
+    try:
+        return parse_commit(repo, version.encode("ascii")).id
+    except (KeyError, ValueError) as error:
+        raise StandaloneUpdateError("Commit '{}' does not exist.".format(version)) from error
+
+
+def default_branch_tip(repo):
+    """The fetched tip of the remote's default branch, else HEAD, or None."""
+    commit = _ref(repo, LAUNCHER_DEFAULT_BRANCH_REF)
+    if commit is None:
+        default = default_branch(repo)
+        if default:
+            commit = _ref(repo, REMOTE_BRANCH_PREFIX + default.encode("utf-8"))
+    if commit is None:
+        try:
+            commit = repo.head()
+        except KeyError:
+            return None
+    return commit
+
+
+def recent_commits(repo, count=RECENT_COMMIT_VERSIONS):
+    """The ``count`` most recent commits of :func:`default_branch_tip`, newest first."""
+    tip = default_branch_tip(repo)
+    if tip is None:
+        return []
+    from dulwich.walk import ORDER_DATE
+
+    return [
+        entry.commit
+        for entry in repo.get_walker(include=[tip], order=ORDER_DATE, max_entries=count)
+    ]
+
+
 def version_kind(version):
-    """Classify a version string; anything unprefixed that is no tag is a branch."""
-    if is_version_tag(version):
-        return KIND_TAG
+    """Classify a version string; anything unprefixed that is no tag or commit is a branch."""
     if version.startswith(PULL_VERSION_PREFIX) and version[len(PULL_VERSION_PREFIX):].isdigit():
         return KIND_PULL
     if version.startswith(LOCAL_VERSION_PREFIX) and len(version) > len(LOCAL_VERSION_PREFIX):
         return KIND_LOCAL
+    if is_version_tag(version):
+        return KIND_TAG
+    if is_commit_version(version):
+        return KIND_COMMIT
     return KIND_BRANCH
 
 
@@ -557,7 +625,9 @@ def resolve_version(repo, version, tags_only=False):
     ``commit``, as for version tags and pull requests. ``tags_only`` is for the
     launcher's layout, whose versions are always tags.
     """
-    kind = KIND_TAG if tags_only else version_kind(version)
+    kind = KIND_TAG if tags_only and not is_commit_version(version) else version_kind(version)
+    if kind == KIND_COMMIT and _ref(repo, TAG_PREFIX + version.encode("utf-8")) is None:
+        return kind, resolve_commit(repo, version), None
     if kind == KIND_PULL:
         number = version[len(PULL_VERSION_PREFIX):]
         commit = _ref(repo, _pull_ref(number))
@@ -926,6 +996,19 @@ def _fetch_branches_logged(repo_path, timeout, exit_event, pull_numbers=None):
     return _run_cancellable(fetch, timeout, exit_event, "fetching branches")
 
 
+def _fetch_default_branch_logged(repo_path, timeout, exit_event):
+    """Fetch the default branch for commit versions; a failure keeps the fetched one."""
+    log = get_logger()
+    log.info("pyappify found no version tags, fetching the default branch of %s", repo_path)
+    try:
+        _run_cancellable(
+            lambda: fetch_default_branch(repo_path), timeout, exit_event, "fetching the default branch"
+        )
+    except Exception as error:
+        _process._raise_if_exit_requested(exit_event)
+        log.warning("pyappify could not fetch the default branch: %s", error)
+
+
 # --- update notes -------------------------------------------------------------
 
 
@@ -1148,6 +1231,48 @@ def list_branch_versions(repo, pulls=(), language=None, tags_by_commit=None):
     return versions
 
 
+def list_commit_versions(repo, head, tags_by_commit, language):
+    """The versions of a repository without version tags: its ``RECENT_COMMIT_VERSIONS``
+    most recent commits on the default branch, newest first, named by short hash."""
+    commits = recent_commits(repo)
+    versions = []
+    for index, commit in enumerate(commits):
+        if index + 1 < len(commits):
+            previous_commit = commits[index + 1].id
+            previous = commit_version_name(previous_commit)
+        else:
+            previous_commit = commit.parents[0] if commit.parents else None
+            previous = None
+        subject = commit.message.decode("utf-8", "replace").strip().splitlines()
+        version = commit_version_name(commit.id)
+        notes = _resolve_notes(
+            repo, commit.id, previous_commit, tags_by_commit, language,
+            lambda: collect_commit_messages(repo, commit.id, previous_commit),
+        )
+        versions.append(_version_entry(
+            KIND_COMMIT,
+            version,
+            "{} {}".format(version, subject[0] if subject else "").strip(),
+            commit.id,
+            commit_relation(repo, head, commit.id),
+            notes,
+            previous,
+        ))
+    return versions
+
+
+def fetch_default_branch(repo_path, progress=None):
+    """Fetch the remote's default branch for commit versions (see :func:`fetch_branches`),
+    also to the ref the launcher reads it from."""
+    branch = fetch_branches(repo_path, progress=progress)
+    if branch:
+        with open_repo(repo_path) as repo:
+            tip = _ref(repo, REMOTE_BRANCH_PREFIX + branch.encode("utf-8"))
+            if tip is not None:
+                set_ref(repo, LAUNCHER_DEFAULT_BRANCH_REF, tip)
+    return branch
+
+
 def list_versions(repo_path, number_versions, release_only, pulls=(), language=None):
     """Version history from local refs, in the launcher's response format.
 
@@ -1172,6 +1297,9 @@ def list_versions(repo_path, number_versions, release_only, pulls=(), language=N
         except KeyError:
             head = None
         tags = local_version_tags(repo)
+        if not tags:
+            versions.extend(list_commit_versions(repo, head, tags_by_commit, language))
+            return versions
         if release_only:
             tags = [tag for tag in tags if is_release_version(tag)]
         for index, version in enumerate(tags[:number_versions]):
@@ -1353,6 +1481,11 @@ def get_version_list(
 ):
     repo_path = repo_path or find_repo_path()
     _fetch_tags_logged(repo_path, timeout, exit_event)
+    with open_repo(repo_path) as repo:
+        has_version_tags = bool(local_version_tags(repo))
+    if not has_version_tags:
+        _process._raise_if_exit_requested(exit_event)
+        _fetch_default_branch_logged(repo_path, timeout, exit_event)
     pulls = ()
     if not release_only and not is_launcher_layout(repo_path):
         _process._raise_if_exit_requested(exit_event)
@@ -1415,11 +1548,16 @@ def prepare_update_job(
     """
     repo_path = repo_path or find_repo_path()
     managed = is_launcher_layout(repo_path)
-    kind = KIND_TAG if managed else version_kind(version)
+    kind = version_kind(version)
+    if managed and kind != KIND_COMMIT:
+        kind = KIND_TAG
     # A local branch needs nothing from the remote, so it also works offline.
     if kind != KIND_LOCAL:
         _fetch_tags_logged(repo_path, timeout, exit_event)
-        if kind != KIND_TAG:
+        if kind == KIND_COMMIT:
+            _process._raise_if_exit_requested(exit_event)
+            _fetch_default_branch_logged(repo_path, timeout, exit_event)
+        elif kind != KIND_TAG:
             _process._raise_if_exit_requested(exit_event)
             pull_numbers = [int(version[len(PULL_VERSION_PREFIX):])] if kind == KIND_PULL else []
             _fetch_branches_logged(repo_path, timeout, exit_event, pull_numbers)

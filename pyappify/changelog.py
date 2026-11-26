@@ -38,8 +38,16 @@ def changelog_path(language):
 
 
 def version_key(version):
-    """``[v1.3.0]`` and ``1.3.0`` both name the tag ``v1.3.0``: compare without them."""
+    """``[v1.3.0]``, ``1.3.0`` and ``release-1.3.0`` all name the tag ``v1.3.0``.
+
+    Compared without brackets, the tag's name prefix and the ``v``.
+    """
+    from .versions import version_without_prefix
+
     version = str(version).strip().strip("[]").strip()
+    without_prefix = version_without_prefix(version)
+    if without_prefix is not None:
+        return without_prefix
     if version[:1] in ("v", "V") and version[1:2].isdigit():
         version = version[1:]
     return version

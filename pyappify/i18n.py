@@ -152,6 +152,7 @@ STRINGS = {
     "kind_release": ("Release", "正式版", "正式版", "Estable", "リリース", "정식"),
     "kind_prerelease": ("Pre-release", "预览版", "預覽版", "Preliminar", "プレリリース", "사전 출시"),
     "kind_branch": ("Branch", "分支", "分支", "Rama", "ブランチ", "브랜치"),
+    "kind_commit": ("Commit", "提交", "提交", "Commit", "コミット", "커밋"),
     "kind_local": ("Local branch", "本地分支", "本機分支", "Rama local", "ローカルブランチ", "로컬 브랜치"),
     "kind_pr": ("Pull request", "拉取请求", "拉取請求", "Pull request", "プルリクエスト", "풀 리퀘스트"),
     "relation_current": ("✓ Installed", "✓ 已安装", "✓ 已安裝", "✓ Instalada", "✓ インストール済み", "✓ 설치됨"),
@@ -230,20 +231,51 @@ STRINGS = {
         "pip 미러를 저장할 수 없습니다",
     ),
     "mirror_default": (
-        "Default (pip configuration)", "默认（pip 配置）", "預設（pip 設定）",
-        "Predeterminado (configuración de pip)", "既定 (pip の設定)", "기본값 (pip 설정)",
+        "Automatic (fastest mirror)", "自动（最快的镜像源）", "自動（最快的鏡像來源）",
+        "Automático (espejo más rápido)", "自動 (最速のミラー)", "자동 (가장 빠른 미러)",
     ),
     "mirror_pypi": ("PyPI (official)", "PyPI（官方）", "PyPI（官方）", "PyPI (oficial)",
                     "PyPI (公式)", "PyPI (공식)"),
-    "mirror_tuna": ("Tsinghua University (TUNA)", "清华大学（TUNA）", "清華大學（TUNA）",
-                    "Universidad Tsinghua (TUNA)", "清華大学 (TUNA)", "칭화대학교 (TUNA)"),
     "mirror_aliyun": ("Alibaba Cloud", "阿里云", "阿里雲", "Alibaba Cloud", "Alibaba Cloud",
                       "Alibaba Cloud"),
-    "mirror_ustc": ("USTC", "中国科学技术大学", "中國科學技術大學", "USTC", "USTC", "USTC"),
     "mirror_huawei": ("Huawei Cloud", "华为云", "華為雲", "Huawei Cloud", "Huawei Cloud",
                       "Huawei Cloud"),
     "mirror_tencent": ("Tencent Cloud", "腾讯云", "騰訊雲", "Tencent Cloud", "Tencent Cloud",
                        "Tencent Cloud"),
+    "retry_mirror_title": (
+        "Choose another pip mirror, then retry",
+        "请选择其他 pip 镜像源，然后重试",
+        "請選擇其他 pip 鏡像來源，然後重試",
+        "Elige otro espejo de pip y vuelve a intentarlo",
+        "別の pip ミラーを選んで、再試行してください",
+        "다른 pip 미러를 선택한 뒤 다시 시도하세요",
+    ),
+    "retry_mirror_hint": (
+        "The package index could not be reached. The app restarts on its previous version "
+        "when you close this window.",
+        "无法连接到软件包源。关闭此窗口后，应用将以之前的版本重新启动。",
+        "無法連線到套件來源。關閉此視窗後，應用程式將以先前的版本重新啟動。",
+        "No se pudo conectar con el índice de paquetes. La aplicación se reiniciará con la "
+        "versión anterior al cerrar esta ventana.",
+        "パッケージインデックスに接続できませんでした。このウィンドウを閉じると、"
+        "アプリは以前のバージョンで再起動します。",
+        "패키지 인덱스에 연결할 수 없습니다. 이 창을 닫으면 앱이 이전 버전으로 다시 시작됩니다.",
+    ),
+    "mirror_unreachable": ("unreachable", "无法连接", "無法連線", "sin conexión", "接続できません",
+                           "연결 불가"),
+    "retry_update": ("Retry", "重试", "重試", "Reintentar", "再試行", "다시 시도"),
+    "pip_network_error": (
+        "Could not download Python packages. Check your network connection, or switch "
+        "to another pip mirror and update again.",
+        "无法下载 Python 包。请检查网络连接，或切换到其他 pip 镜像源后重新更新。",
+        "無法下載 Python 套件。請檢查網路連線，或切換到其他 pip 鏡像來源後重新更新。",
+        "No se pudieron descargar los paquetes de Python. Revisa tu conexión de red, o cambia "
+        "a otro espejo de pip y actualiza de nuevo.",
+        "Python パッケージをダウンロードできませんでした。ネットワーク接続を確認するか、"
+        "別の pip ミラーに切り替えて、もう一度アップデートしてください。",
+        "Python 패키지를 내려받을 수 없습니다. 네트워크 연결을 확인하거나, "
+        "다른 pip 미러로 바꾼 뒤 다시 업데이트하세요.",
+    ),
     "log": ("Log", "日志", "日誌", "Registro", "ログ", "로그"),
     "copy": ("Copy", "复制", "複製", "Copiar", "コピー", "복사"),
     "open_log_file": ("Open log file", "打开日志文件", "開啟日誌檔", "Abrir archivo de registro",

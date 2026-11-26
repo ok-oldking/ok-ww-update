@@ -51,6 +51,49 @@ STATUS_SKIPPED = "skipped"
 STATUS_FAILED = "failed"
 # pip output lines worth showing as the dependency step's detail.
 PIP_PROGRESS_PREFIXES = ("Collecting ", "Downloading ", "Installing ", "Building ", "Successfully ")
+# pip output that means the package index could not be reached or refused us.
+# "(from versions: none)" is how pip reports an index that answered with an
+# error page, as a mirror blocking the user's IP does.
+PIP_NETWORK_MARKERS = (
+    "NewConnectionError", "ConnectTimeoutError", "ReadTimeoutError", "ProxyError",
+    "SSLError", "ConnectionResetError", "RemoteDisconnected", "Max retries exceeded",
+    "Failed to establish a new connection", "Read timed out", "getaddrinfo failed",
+    "Temporary failure in name resolution", "Name or service not known",
+    "Could not fetch URL", "HTTP error 403", "HTTP error 5", "(from versions: none)",
+)
+# The UI swaps this message for a translated hint, so keep it stable.
+PIP_NETWORK_ERROR = "pip could not download packages from the package index."
+
+
+PIP_DEFAULT_INDEX = "pip's default"
+_INDEX_PREFIX = " (index: "
+_INDEX_SEPARATOR = ", "
+
+
+class PipNetworkError(standalone.StandaloneUpdateError):
+    """pip failed because the package index could not be reached.
+
+    ``urls`` are the indexes tried, in order; "" is pip's own default.
+    """
+
+    def __init__(self, urls):
+        urls = [urls] if isinstance(urls, str) else list(urls)
+        super(PipNetworkError, self).__init__(
+            "{} Check your network connection, or switch to another pip mirror "
+            "and update again.{}{})".format(
+                PIP_NETWORK_ERROR, _INDEX_PREFIX,
+                _INDEX_SEPARATOR.join(url or PIP_DEFAULT_INDEX for url in urls))
+        )
+        self.urls = urls
+        self.url = urls[-1] if urls else ""
+
+
+def failed_indexes(message):
+    """The indexes a ``PipNetworkError`` message names; "" is pip's default."""
+    if not message.startswith(PIP_NETWORK_ERROR) or _INDEX_PREFIX not in message:
+        return []
+    names = message.rsplit(_INDEX_PREFIX, 1)[1].rstrip(")").split(_INDEX_SEPARATOR)
+    return ["" if name == PIP_DEFAULT_INDEX else name for name in names]
 
 
 def _no_progress(step, status, detail=None):
@@ -84,11 +127,14 @@ def main(argv=None):
     return 1
 
 
-def run_job(job, log, progress=None):
+def run_job(job, log, progress=None, relaunch_after_network_error=True):
     """Apply the update described by ``job``; return whether it succeeded.
 
     ``progress(step, status, detail=None)`` is called as each of ``STEPS``
-    (and ``STEP_ROLLBACK`` on failure) starts and ends.
+    (and ``STEP_ROLLBACK`` on failure) starts and ends. With
+    ``relaunch_after_network_error`` false, a pip network failure leaves the
+    rolled-back app stopped, so the caller can retry with another mirror and
+    restart the app itself with ``relaunch(job, {}, log)`` if it gives up.
     """
     progress = progress or _no_progress
     repo_path = job["repo_path"]
@@ -119,7 +165,8 @@ def run_job(job, log, progress=None):
         progress(STEP_ROLLBACK, STATUS_ACTIVE, "Restoring {}".format(previous_commit[:12]))
         if rollback(repo_path, previous_commit, log, job.get("previous_ref")):
             progress(STEP_ROLLBACK, STATUS_DONE)
-            relaunch(job, {}, log)
+            if relaunch_after_network_error or not isinstance(error, PipNetworkError):
+                relaunch(job, {}, log)
         else:
             progress(STEP_ROLLBACK, STATUS_FAILED)
         return False
@@ -289,10 +336,6 @@ def pip_install(repo_path, spec, pip_args, log, on_line=None):
         arg in ("--index-url", "-i") or arg.startswith("--index-url=")
         or (arg.startswith("-i") and len(arg) > 2) for arg in args
     )
-    if not explicit_index:
-        url = pip_index.read_url(repo_path, log=log)
-        if url:
-            command.extend(["--index-url", url])
     if spec.endswith(".txt"):
         requirements_path = os.path.join(repo_path, spec)
         if not os.path.isfile(requirements_path):
@@ -303,6 +346,33 @@ def pip_install(repo_path, spec, pip_args, log, on_line=None):
     else:
         command.extend(spec.split())
 
+    url = "" if explicit_index else pip_index.read_url(repo_path, log=log)
+    automatic = False
+    if not explicit_index and not url and not pip_index.pip_has_index_config():
+        url = pip_index.auto_url(repo_path, log=log)
+        automatic = bool(url)
+    unreachable = []
+    if url:
+        try:
+            _run_pip(command[:5] + ["--index-url", url] + command[5:], repo_path, log, on_line, url)
+            return
+        except standalone.StandaloneUpdateError as error:
+            if not automatic:
+                raise
+            if isinstance(error, PipNetworkError):
+                unreachable.append(url)
+            log.warning("pip install with %s failed; retrying with pip's default index", url)
+            pip_index.forget_auto_url(repo_path)
+    try:
+        _run_pip(command, repo_path, log, on_line, "")
+    except PipNetworkError as error:
+        if not unreachable:
+            raise
+        # Name every index that could not be reached, not only the last one.
+        raise PipNetworkError(unreachable + error.urls) from error
+
+
+def _run_pip(command, repo_path, log, on_line, url):
     log.info("Running: %s", subprocess.list2cmdline(command))
     env = os.environ.copy()
     env["PYTHONIOENCODING"] = "utf-8"
@@ -320,12 +390,18 @@ def pip_install(repo_path, spec, pip_args, log, on_line=None):
         errors="replace",
         **kwargs
     )
+    network_error = False
     for line in process.stdout:
         line = line.rstrip()
         log.info("  %s", line)
+        network_error = network_error or any(marker in line for marker in PIP_NETWORK_MARKERS)
         if on_line and line.lstrip().startswith(PIP_PROGRESS_PREFIXES):
             on_line(line.strip())
     if process.wait() != 0:
+        if network_error:
+            error = PipNetworkError(url)
+            log.error("%s", error)
+            raise error
         raise standalone.StandaloneUpdateError(
             "pip install exited with code {}".format(process.returncode)
         )

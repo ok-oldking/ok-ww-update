@@ -83,15 +83,14 @@ PALETTES = {
 MIRROR_KEYS = {
     "": "mirror_default",
     "https://pypi.org/simple/": "mirror_pypi",
-    "https://pypi.tuna.tsinghua.edu.cn/simple": "mirror_tuna",
     "https://mirrors.aliyun.com/pypi/simple/": "mirror_aliyun",
-    "https://mirrors.ustc.edu.cn/pypi/simple/": "mirror_ustc",
     "https://repo.huaweicloud.com/repository/pypi/simple/": "mirror_huawei",
     "https://mirrors.cloud.tencent.com/pypi/simple/": "mirror_tencent",
 }
 
 KIND_KEYS = {
     standalone.KIND_BRANCH: "kind_branch",
+    standalone.KIND_COMMIT: "kind_commit",
     standalone.KIND_LOCAL: "kind_local",
     standalone.KIND_PULL: "kind_pr",
 }
@@ -599,6 +598,15 @@ class UpdaterWindow:
         self.problem_count = 0
         self.close_after = None
         self.steps = {}
+        self.mirror_boxes = []
+        self.mirror_urls = list(pip_index.PIP_INDEX_URLS)
+        # Indexes pip could not reach during this window; "" is the automatic choice.
+        self.failed_mirrors = set()
+        # The last update job and its log, and a rolled-back app waiting to be
+        # restarted while the user may still retry with another mirror.
+        self.last_job = None
+        self.job_log = None
+        self.pending_relaunch = None
         self._chips = []
         self._badge_danger = False
         self.ui_handler = UiLogHandler(self.post, self._append_log)
@@ -793,13 +801,8 @@ class UpdaterWindow:
         self.bind_text(ttk.Label(texts, style="CardMuted.TLabel"), "mirror_hint").pack(anchor="w")
         self.mirror_saved = ttk.Label(inner, text="", style="Success.TLabel")
         self.mirror_saved.pack(side="right", padx=(px(10), 0))
-        self.mirror_urls = list(pip_index.PIP_INDEX_URLS)
-        self.mirror_box = ttk.Combobox(
-            inner, state="disabled", width=52, font=theme.fonts["body"],
-        )
-        self._translate_mirrors()
+        self.mirror_box = self._mirror_combobox(inner, self.mirror_saved, state="disabled")
         self.mirror_box.pack(side="right")
-        self.mirror_box.bind("<<ComboboxSelected>>", lambda _event: self._on_mirror_selected())
         self._make_update_button()
         page.pack(fill="both", expand=True)
         return page
@@ -865,7 +868,7 @@ class UpdaterWindow:
             self.notes.tag_configure("dot", foreground=c["accent"])
             self.notes.tag_configure("empty", foreground=c["muted"])
             self._render_notes()
-            self._style_mirror_popdown()
+        self._style_mirror_popdown()
         for row in self.steps.values():
             row.draw()
 
@@ -880,14 +883,15 @@ class UpdaterWindow:
                            fill=c["accent_fg"], font=self.theme.fonts["icon"])
 
     def _style_mirror_popdown(self):
-        try:
-            popdown = self.root.tk.call("ttk::combobox::PopdownWindow", self.mirror_box)
-            c = self.theme.colors
-            self.root.tk.call(popdown + ".f.l", "configure", "-background", c["surface"],
-                              "-foreground", c["text"], "-selectbackground", c["select"],
-                              "-selectforeground", c["text"])
-        except tk.TclError:
-            pass
+        c = self.theme.colors
+        for box in self._live_mirror_boxes():
+            try:
+                popdown = self.root.tk.call("ttk::combobox::PopdownWindow", box)
+                self.root.tk.call(popdown + ".f.l", "configure", "-background", c["surface"],
+                                  "-foreground", c["text"], "-selectbackground", c["select"],
+                                  "-selectforeground", c["text"])
+            except tk.TclError:
+                pass
 
     # -- small UI helpers --
 
@@ -931,9 +935,9 @@ class UpdaterWindow:
             else:
                 del self._texts[name]
         self.root.title(self.tr("window_title", app=self._app_name()))
+        self._translate_mirrors()
         if self.manager_page is not None:
             self._translate_headings()
-            self._translate_mirrors()
             if self.versions:
                 self._show_versions(self.versions)
 
@@ -943,10 +947,12 @@ class UpdaterWindow:
                               anchor="w")
 
     def _translate_mirrors(self):
-        current = self.mirror_box.current()
-        self.mirror_box.configure(values=[self._mirror_label(url) for url in self.mirror_urls])
-        if current >= 0:
-            self.mirror_box.current(current)
+        labels = [self._mirror_label(url) for url in self.mirror_urls]
+        for box in self._live_mirror_boxes():
+            current = box.current()
+            box.configure(values=labels)
+            if current >= 0:
+                box.current(current)
 
     def _make_update_button(self):
         self.update_button = ttk.Button(self.footer_buttons, style="Accent.TButton",
@@ -989,13 +995,14 @@ class UpdaterWindow:
     def show_error(self, error, title=None, log=True):
         if isinstance(error, InterruptedError) or self.exit_event.is_set():
             return
-        message = str(error) or error.__class__.__name__
-        self.bind_text(self.banner_text, lambda: (self.tr(title) + "\n" if title else "") + message)
+        # A callable error is a translated message that follows the language.
+        message = error if callable(error) else (lambda: str(error) or error.__class__.__name__)
+        self.bind_text(self.banner_text, lambda: (self.tr(title) + "\n" if title else "") + message())
         if not self.banner.winfo_ismapped():
             self.banner.pack(side="top", fill="x", padx=self.theme.px(16),
                              pady=(self.theme.px(12), 0), before=self.content)
         if log:
-            self.list_log.error("%s", message)
+            self.list_log.error("%s", message())
         self.set_status("something_wrong")
 
     def hide_banner(self):
@@ -1261,28 +1268,56 @@ class UpdaterWindow:
 
     def _mirror_label(self, url):
         name = self.tr(MIRROR_KEYS[url]) if url in MIRROR_KEYS else url
-        if not url:
-            return name
-        host = url.split("://", 1)[-1].split("/", 1)[0]
-        return "{}  —  {}".format(name, host)
+        if url:
+            host = url.split("://", 1)[-1].split("/", 1)[0]
+            name = "{}  —  {}".format(name, host)
+        if url in self.failed_mirrors:
+            name = "{}   ✕ {}".format(name, self.tr("mirror_unreachable"))
+        return name
+
+    def _suggested_mirror(self, url):
+        """``url`` unless it failed in this window; then the first mirror that has not."""
+        if url not in self.failed_mirrors:
+            return url
+        untried = [option for option in self.mirror_urls
+                   if option and option not in self.failed_mirrors]
+        return untried[0] if untried else url
+
+    def _mirror_combobox(self, parent, saved_label, state="readonly"):
+        """A pip mirror picker that saves the choice and confirms on ``saved_label``."""
+        box = ttk.Combobox(parent, state=state, width=52, font=self.theme.fonts["body"])
+        box.configure(values=[self._mirror_label(url) for url in self.mirror_urls])
+        box.bind("<<ComboboxSelected>>",
+                 lambda _event: self._on_mirror_selected(box, saved_label))
+        self.mirror_boxes.append(box)
+        return box
+
+    def _live_mirror_boxes(self):
+        self.mirror_boxes = [box for box in self.mirror_boxes if _exists(box)]
+        return self.mirror_boxes
 
     def _select_mirror(self, url):
         index = self.mirror_urls.index(url) if url in self.mirror_urls else 0
-        self.mirror_box.current(index)
+        for box in self._live_mirror_boxes():
+            box.current(index)
         self._current_mirror = self.mirror_urls[index]
 
-    def _on_mirror_selected(self):
-        self.mirror_box.selection_clear()
-        url = self.mirror_urls[self.mirror_box.current()]
+    def _on_mirror_selected(self, box=None, saved_label=None):
+        box = box or self.mirror_box
+        saved_label = saved_label or self.mirror_saved
+        box.selection_clear()
+        url = self.mirror_urls[box.current()]
         if url == getattr(self, "_current_mirror", None):
             return
         repo_path = self.repo_path
 
         def saved(_result):
-            self._current_mirror = url
+            self._select_mirror(url)
             self.list_log.info("Pip mirror set to %s", url or "pip's default")
-            self.bind_text(self.mirror_saved, "mirror_saved")
-            self.root.after(2500, lambda: self.bind_text(self.mirror_saved, None))
+            if _exists(saved_label):
+                self.bind_text(saved_label, "mirror_saved")
+                self.root.after(2500, lambda: _exists(saved_label)
+                                and self.bind_text(saved_label, None))
 
         def failed(error):
             self._select_mirror(self._current_mirror)
@@ -1359,8 +1394,13 @@ class UpdaterWindow:
         return log
 
     def _run_job(self, job, log, progress):
+        # Runs on the worker thread, before its result is posted back.
+        self.last_job, self.job_log, self.pending_relaunch = job, log, None
         try:
-            return standalone_updater.run_job(job, log, progress)
+            # On a pip network error the old app stays stopped: the user may
+            # retry with another mirror, and closing the window restarts it.
+            return standalone_updater.run_job(job, log, progress,
+                                              relaunch_after_network_error=False)
         except Exception:
             log.exception("Update failed unexpectedly.")
             return False
@@ -1385,6 +1425,7 @@ class UpdaterWindow:
         panel.pack(fill="both", expand=True)
         inner = ttk.Frame(panel, style="Card.TFrame", padding=(px(28), px(22)))
         inner.pack(fill="both", expand=True)
+        self.progress_inner = inner
         self.progress_title = ttk.Label(inner, style="CardTitle.TLabel")
         self.bind_text(self.progress_title, "updating_to", version=version)
         self.progress_title.pack(anchor="w")
@@ -1447,6 +1488,14 @@ class UpdaterWindow:
         if not succeeded:
             failed = next((row for row in self.steps.values() if row.status == FAILED), None)
             reason = failed.detail if failed else ""
+            if reason.startswith(standalone_updater.PIP_NETWORK_ERROR):
+                rolled_back = self.steps[standalone_updater.STEP_ROLLBACK].status == DONE
+                if rolled_back and self.last_job is not None:
+                    self.pending_relaunch = self.last_job
+                self.failed_mirrors.update(standalone_updater.failed_indexes(reason))
+                self._translate_mirrors()
+                self._on_update_failed(lambda: self.tr("pip_network_error"), network=True)
+                return
             self._on_update_failed(RuntimeError(reason or self.tr("see_log")))
             return
         self.progress_bar.configure(value=100, style="Success.Horizontal.TProgressbar")
@@ -1476,7 +1525,7 @@ class UpdaterWindow:
         button.destroy()
         self.set_status("update_complete")
 
-    def _on_update_failed(self, error):
+    def _on_update_failed(self, error, network=False):
         if self.updating:
             self.updating = False
             self._set_busy(-1)
@@ -1491,9 +1540,106 @@ class UpdaterWindow:
         self.progress_subtitle.configure(style="Danger.TLabel")
         self.show_error(error, "update_failed", log=False)
         self._clear_footer_buttons()
-        self._footer_button("close", self.root.destroy, accent=self.manager_page is None)
+        retry = network and self.last_job is not None
+        if retry:
+            self._show_mirror_retry()
+            self.retry_button = self._footer_button("retry_update", self._retry_update,
+                                                    accent=True)
+        self._footer_button("close", self.root.destroy,
+                            accent=self.manager_page is None and not retry)
         if self.manager_page is not None:
-            self._footer_button("back_to_versions", self._back_to_manager, accent=True)
+            self._footer_button("back_to_versions", self._back_to_manager, accent=not retry)
+
+    def _show_mirror_retry(self):
+        """Under the failed steps, ask for another pip mirror to retry with."""
+        theme, px = self.theme, self.theme.px
+        # The empty detail line under the steps makes room for the panel.
+        self.step_detail.pack_forget()
+        panel = tk.Frame(self.progress_inner, bd=0, highlightthickness=1)
+        theme.register(panel, background="warning_bg", highlightbackground="warning",
+                       highlightcolor="warning")
+        panel.pack(fill="x", pady=(px(14), 0))
+        inner = tk.Frame(panel, bd=0, padx=px(14), pady=px(10))
+        theme.register(inner, background="warning_bg")
+        inner.pack(fill="x")
+        title = tk.Label(inner, anchor="w", justify="left", font=theme.fonts["bold"])
+        theme.register(title, background="warning_bg", foreground="text")
+        self.bind_text(title, "retry_mirror_title").pack(fill="x")
+        hint = tk.Label(inner, anchor="w", justify="left", font=theme.fonts["small"])
+        theme.register(hint, background="warning_bg", foreground="muted")
+        self.bind_text(hint, "retry_mirror_hint").pack(fill="x")
+        hint.bind("<Configure>", lambda event: hint.configure(wraplength=max(1, event.width)))
+        row = tk.Frame(inner, bd=0)
+        theme.register(row, background="warning_bg")
+        row.pack(fill="x", pady=(px(8), 0))
+        box = self._mirror_combobox(row, None, state="disabled")
+        box.pack(side="left")
+        saved = tk.Label(row, text="", font=theme.fonts["small"])
+        theme.register(saved, background="warning_bg", foreground="success")
+        saved.pack(side="left", padx=(px(10), 0))
+        box.bind("<<ComboboxSelected>>", lambda _event: self._on_mirror_selected(box, saved))
+        self.retry_mirror_box, self.retry_mirror_saved = box, saved
+        self._style_mirror_popdown()
+        self._fit_height()
+        repo_path = self.repo_path
+
+        def loaded(url):
+            if _exists(box):
+                box.configure(state="readonly")
+                self._select_mirror(url)
+                # Offer a mirror that has not failed; Retry saves it.
+                box.current(self.mirror_urls.index(self._suggested_mirror(url)))
+
+        def unreadable(error):
+            # Without a saved choice the picker starts on the automatic default.
+            self.list_log.warning("Could not read the saved pip mirror: %s", error)
+            loaded("")
+
+        self.run_async(lambda: pip_index.read_url(repo_path, log=self.list_log),
+                       loaded, unreadable)
+
+    def _fit_height(self):
+        """Grow the window when its content no longer fits."""
+        root = self.root
+        root.update_idletasks()
+        needed = root.winfo_reqheight()
+        if needed > root.winfo_height() and root.state() == "normal":
+            root.geometry("{}x{}".format(root.winfo_width(), needed))
+
+    def _retry_update(self):
+        job, log = self.last_job, self.job_log
+        if job is None or self.updating:
+            return
+        box = getattr(self, "retry_mirror_box", None)
+        chosen = self.mirror_urls[box.current()] if _exists(box) and box.current() >= 0 else None
+        save = chosen is not None and chosen != getattr(self, "_current_mirror", None)
+        repo_path = self.repo_path
+        self.hide_banner()
+        if self.progress_page is not None:
+            self.progress_page.destroy()
+            self.progress_page = None
+        self.steps = {}
+        log.info("Retrying the update to %s.", job["version"])
+        self._begin_update(job["version"], job.get("previous_version"), prepare=False)
+        progress = self._progress_callback()
+        if save:
+            self._current_mirror = chosen
+
+        def work():
+            if save:
+                pip_index.write_url(chosen, repo_path)
+                log.info("Pip mirror set to %s", chosen or "pip's default")
+            return self._run_job(job, log, progress)
+
+        self.run_async(work, self._on_update_finished, self._on_update_failed)
+
+    def relaunch_pending_app(self):
+        """Restart the rolled-back app that a pip network failure left stopped."""
+        job, self.pending_relaunch = self.pending_relaunch, None
+        if job is None:
+            return None
+        log = self.job_log or logging.getLogger("pyappify.standalone_updater")
+        return standalone_updater.relaunch(job, {}, log)
 
     def _back_to_manager(self):
         self.hide_banner()
@@ -1540,7 +1686,10 @@ def run_manager(session):
     window = UpdaterWindow(root, session=session)
     _show(root)
     window.start_manager()
-    root.mainloop()
+    try:
+        root.mainloop()
+    finally:
+        window.relaunch_pending_app()
     return 0
 
 
@@ -1560,5 +1709,8 @@ def run_job_window(job_path):
     window._on_update_finished = finished
     _show(root)
     window.start_job()
-    root.mainloop()
+    try:
+        root.mainloop()
+    finally:
+        window.relaunch_pending_app()
     return result["code"]

@@ -1,23 +1,66 @@
 """Version comparison and update-note helpers."""
 import re
 
-# Same tag format and ordering as the launcher (src-tauri/src/git.rs):
-# v1.2.3, 1.2.3, v1.2.3-beta, v1.2.3.rc.2 ... with alpha < beta < rc < release.
+# Version tags, parsed and ordered the same way as the launcher
+# (src-tauri/src/git.rs, src/versions.ts) and pyappify-action (versions.js):
+#
+#   [prefix] [v] N[.N[.N[.N]]] [prerelease word [number]]
+#
+# - prefix: a name ending in "-", "_" or "/" (release-, app-v, app/), ignored for ordering.
+# - one to four number parts; missing parts count as 0 (v1.2 == v1.2.0). A single number
+#   needs the v (v5, app-v5), so plain numbers, pr/7 and commit hashes are no versions.
+# - the prerelease word may follow with or without "-", "." or "_", and so may its number:
+#   1.2.3-beta.2, 1.2.3b2, 1.2.3rc1, 1.2.3-preview, 1.2.3.post1, in any case.
+#   dev < alpha (a) < beta (b) < any other word < rc (c, pre, preview) < release < post.
+#   A missing prerelease number sorts before any number.
 _VERSION_TAG_RE = re.compile(
-    r"^v?(\d+)\.(\d+)\.(\d+)(?:(?:-|\.)(alpha|beta|rc)(?:\.(\d+))?)?$"
+    r"^([A-Za-z][A-Za-z0-9_.-]*?[-_/])??([vV])?(\d+(?:\.\d+){0,3})"
+    r"(?:[-._]?([A-Za-z]+)(?:[-._]?(\d+))?)?$"
 )
-_PRERELEASE_RANK = {"alpha": 0, "beta": 1, "rc": 2, None: 3}
+_OTHER_RANK = 3
+_RELEASE_RANK = 5
+_WORD_RANK = {
+    "dev": 0,
+    "alpha": 1, "a": 1,
+    "beta": 2, "b": 2,
+    "rc": 4, "c": 4, "pre": 4, "preview": 4,
+    "post": 6,
+}
+# Without version tags, an app's versions are its most recent commits on the
+# default branch, newest first, named by their first COMMIT_VERSION_LENGTH hex digits.
+RECENT_COMMIT_VERSIONS = 30
+COMMIT_VERSION_LENGTH = 7
+_COMMIT_RE = re.compile(r"^[0-9a-fA-F]{7,40}$")
+
+
+def _parse_version_tag(tag_name):
+    match = _VERSION_TAG_RE.match(tag_name or "")
+    if not match:
+        return None
+    prefix, v, numbers, word, number = match.groups()
+    parts = [int(part) for part in numbers.split(".")]
+    if len(parts) == 1 and not v:
+        return None
+    return match, parts, (word or "").lower(), number
 
 
 def version_tag_key(tag_name):
     """Return a sort key for a version tag, or None if it is not a version tag."""
-    match = _VERSION_TAG_RE.match(tag_name or "")
-    if not match:
+    parsed = _parse_version_tag(tag_name)
+    if parsed is None:
         return None
-    major, minor, patch, prerelease, number = match.groups()
+    _match, parts, word, number = parsed
+    parts = parts + [0] * (4 - len(parts))
+    rank = _WORD_RANK.get(word, _OTHER_RANK) if word else _RELEASE_RANK
     # A missing prerelease number sorts before any number, like Rust's Option.
     number_key = -1 if number is None else int(number)
-    return int(major), int(minor), int(patch), _PRERELEASE_RANK[prerelease], number_key
+    return tuple(parts) + (rank, number_key, word if rank == _OTHER_RANK else "")
+
+
+def version_without_prefix(tag_name):
+    """The version part of a version tag without its name prefix and ``v``, or None."""
+    parsed = _parse_version_tag(tag_name)
+    return None if parsed is None else tag_name[parsed[0].start(3):]
 
 
 def is_version_tag(tag_name):
@@ -25,18 +68,23 @@ def is_version_tag(tag_name):
 
 
 def is_release_version(tag_name):
+    """A release or post release tag, or a commit version."""
+    if is_commit_version(tag_name):
+        return True
     key = version_tag_key(tag_name)
-    return key is not None and key[3] == _PRERELEASE_RANK[None]
+    return key is not None and key[4] >= _RELEASE_RANK
+
+
+def is_commit_version(version):
+    """A commit version: 7 to 40 hex digits that are no version tag."""
+    return bool(_COMMIT_RE.match(version or "")) and not is_version_tag(version)
 
 
 def sort_version_tags(tag_names):
-    """Return the version tags in ``tag_names``, newest first."""
+    """Return the version tags in ``tag_names``, newest first; equal versions by name."""
     keyed = [(version_tag_key(name), name) for name in tag_names]
-    return [name for key, name in sorted(
-        (item for item in keyed if item[0] is not None),
-        key=lambda item: item[0],
-        reverse=True,
-    )]
+    keyed = sorted((item for item in keyed if item[0] is not None), key=lambda item: item[1])
+    return [name for _key, name in sorted(keyed, key=lambda item: item[0], reverse=True)]
 
 
 def select_kept_tags(tag_names, keep):

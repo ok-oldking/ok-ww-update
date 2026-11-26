@@ -8,7 +8,7 @@ from src.game_launcher import get_game_launch_arguments
 from src.task.process_feature import process_feature
 from src.task.task_icons import task_icon
 
-version = "v3.8.15"
+version = "v3.8.16"
 
 
 def _find_most_recently_run_pc_exe():
@@ -223,6 +223,12 @@ config = {
         'check_auto_hdr': True,
         'check_night_light': True,
         'force_no_night_light': False,
+    },
+    # Optional: run the PC game in a Windows child session so tasks never move the
+    # user's own mouse or keyboard. Uses the 'windows' settings above to find the game.
+    'child_session': {
+        'resolution': (1920, 1080),
+        'nick': 'Wuthering Waves (Child Session)',
     },
     'browser': {
         'url': 'https://mc.kurogames.com/cloud/#/',
